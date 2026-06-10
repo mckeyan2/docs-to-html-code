@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>doc→html — Word, Excel &amp; Text to HTML</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page">
+
+    <!-- ══ HEADER ══ -->
+    <header class="header">
+      <div class="header-top">
+        <div class="header-brand">
+          <div class="header-logo" aria-hidden="true">
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+              <rect width="38" height="38" rx="9" fill="#1a1a18"/>
+              <path d="M11 10h10.5l5.5 5.5V28a1 1 0 01-1 1H11a1 1 0 01-1-1V11a1 1 0 011-1z" fill="none" stroke="#f0efe9" stroke-width="1.4"/>
+              <path d="M21.5 10v6h5.5" fill="none" stroke="#f0efe9" stroke-width="1.4"/>
+              <path d="M14 20h10M14 23.5h7" stroke="#6fcf97" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="header-title-group">
+            <h1 class="header-title">
+              <span class="ht-doc">doc</span><span class="ht-arrow">→</span><span class="ht-html">html</span>
+            </h1>
+            <p class="header-tagline">Convert Word, Excel &amp; typed text to clean, semantic HTML5</p>
+          </div>
+        </div>
+        <ul class="header-pills" aria-label="Features">
+          <li class="pill">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 100 10A5 5 0 006 1z" stroke="currentColor" stroke-width="1.1"/><path d="M6 4v3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="9" r=".6" fill="currentColor"/></svg>
+            Runs in your browser
+          </li>
+          <li class="pill">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            No server upload
+          </li>
+          <li class="pill">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M2 6h5.5M2 8.5h6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Semantic HTML5
+          </li>
+        </ul>
+      </div>
+      <div class="header-formats">
+        <span class="fmt-label">Accepts</span>
+        <span class="fmt-chip fmt-word">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x=".5" y=".5" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1"/><path d="M2.5 3.5h6M2.5 5.5h4.5M2.5 7.5h5.5" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg>
+          .docx
+        </span>
+        <span class="fmt-chip fmt-excel">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x=".5" y=".5" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1"/><path d="M3 3h5v5H3z" stroke="currentColor" stroke-width=".9"/><path d="M3 5.5h5M5.5 3v5" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg>
+          .xlsx
+        </span>
+        <span class="fmt-chip fmt-excel">.xls</span>
+        <span class="fmt-chip fmt-csv">.csv</span>
+        <span class="fmt-chip fmt-editor">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 2.5h8M1.5 5.5h5.5M1.5 8.5h7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+          Text Editor
+        </span>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <!-- ══ MODE SWITCHER ══ -->
+      <div class="mode-tabs" role="tablist" aria-label="Input method">
+        <button class="mode-tab active" id="mode-upload-btn" role="tab"
+                aria-selected="true" aria-controls="mode-upload">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 9V2M7 2L4 5M7 2l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          Upload File
+        </button>
+        <button class="mode-tab" id="mode-editor-btn" role="tab"
+                aria-selected="false" aria-controls="mode-editor">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 3.5h10M2 7h7M2 10.5h8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          Text Editor
+        </button>
+      </div>
+
+      <!-- ══ UPLOAD PANEL ══ -->
+      <div id="mode-upload" class="mode-panel">
+        <label class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".docx,.xlsx,.xls,.csv" />
+          <div class="drop-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path d="M20 26V14M20 14l-5 5M20 14l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 30h20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <p class="drop-title">Drop your document here</p>
+          <p class="drop-sub">or click to browse</p>
+          <div class="drop-type-row">
+            <span class="drop-type drop-type-word">.docx — Word</span>
+            <span class="drop-type drop-type-excel">.xlsx / .xls — Excel</span>
+            <span class="drop-type drop-type-csv">.csv</span>
+          </div>
+        </label>
+        <div id="upload-status" class="status-bar hidden"></div>
+      </div>
+
+      <!-- ══ TEXT EDITOR PANEL ══ -->
+      <div id="mode-editor" class="mode-panel hidden">
+
+        <div class="editor-wrap">
+
+          <!-- Toolbar -->
+          <div class="editor-toolbar" id="editor-toolbar" role="toolbar" aria-label="Text formatting">
+
+            <!-- Block format -->
+            <select class="toolbar-select" id="block-format" title="Block format">
+              <option value="p">Paragraph</option>
+              <option value="h2">Heading 2</option>
+              <option value="h3">Heading 3</option>
+              <option value="h4">Heading 4</option>
+              <option value="h5">Heading 5</option>
+              <option value="h6">Heading 6</option>
+              <option value="blockquote">Blockquote</option>
+              <option value="pre">Code block</option>
+            </select>
+
+            <span class="tb-sep"></span>
+
+            <!-- Inline format -->
+            <button class="tb-btn" data-cmd="bold" title="Bold (Ctrl+B)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3.5 2.5H7A2 2 0 017 6.5H3.5V2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M3.5 6.5H7.5A2 2 0 017.5 10.5H3.5V6.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="italic" title="Italic (Ctrl+I)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 2.5h5M3 10.5h5M7.5 2.5l-2 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="underline" title="Underline (Ctrl+U)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 2.5v4a3.5 3.5 0 007 0v-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M1.5 11.5h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="strikeThrough" title="Strikethrough">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.5 6.5c0-2 5-2 5 0M4.5 6.5c0 2 5 2 5 0" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="superscript" title="Superscript">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10L6 4M6 10L2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2h3M8.5 4.5h3M11.5 2v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="subscript" title="Subscript">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4l4 6M6 4l-4 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 8.5h3M8.5 11h3M11.5 8.5V11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+
+            <span class="tb-sep"></span>
+
+            <!-- Lists -->
+            <button class="tb-btn" data-cmd="insertUnorderedList" title="Bullet list">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="2" cy="3.5" r=".9" fill="currentColor"/><circle cx="2" cy="6.5" r=".9" fill="currentColor"/><circle cx="2" cy="9.5" r=".9" fill="currentColor"/><path d="M4.5 3.5h7M4.5 6.5h7M4.5 9.5h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="insertOrderedList" title="Numbered list">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2h1.2v3.5M1.2 5.5H4" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.2 7.5c0-.6 1.5-1 1.5-1.5 0-.4-.3-.5-.7-.5s-.7.2-.8.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M1.2 11h1.8L1.2 9.5H3" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 3h6M5.5 6.5h6M5.5 10h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+
+            <span class="tb-sep"></span>
+
+            <!-- Alignment -->
+            <button class="tb-btn" data-cmd="justifyLeft" title="Align left">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M1.5 5.5h7M1.5 8h10M1.5 10.5h5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="justifyCenter" title="Align center">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M3 5.5h7M1.5 8h10M3.5 10.5h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="justifyRight" title="Align right">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M5.5 5.5h7M1.5 8h10M6 10.5h5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="justifyFull" title="Justify">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M1.5 5.5h10M1.5 8h10M1.5 10.5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+
+            <span class="tb-sep"></span>
+
+            <!-- Indent -->
+            <button class="tb-btn" data-cmd="indent" title="Increase indent">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10M4.5 5.5h7M4.5 8h7M1.5 10.5h10M1.5 5.5l2 1.25-2 1.25V5.5z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="outdent" title="Decrease indent">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10M4.5 5.5h7M4.5 8h7M1.5 10.5h10M4.5 5.5L2.5 6.75l2 1.25V5.5z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+
+            <span class="tb-sep"></span>
+
+            <!-- Link / HR / Clear formatting / Clear all -->
+            <button class="tb-btn" id="tb-link" title="Insert / edit link">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 8a3 3 0 004.2 0l1.3-1.3A3 3 0 006.3 2.5L5 3.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 5a3 3 0 00-4.2 0L2.5 6.3A3 3 0 006.7 10.5L8 9.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn" id="tb-hr" title="Insert horizontal rule">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M1.5 3.5h10M1.5 9.5h10" stroke="currentColor" stroke-width=".8" stroke-linecap="round" stroke-dasharray="1.5 1.5"/></svg>
+            </button>
+            <button class="tb-btn" data-cmd="removeFormat" title="Clear formatting">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 2.5l8 8M10.5 2.5l-8 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tb-btn tb-danger" id="tb-clear" title="Clear all content">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M3.5 3.5V11a1 1 0 001 1h4a1 1 0 001-1V3.5M4.5 3.5V2.5h4v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+
+          <!-- Editable content area -->
+          <div class="editor-body"
+               id="editor-body"
+               contenteditable="true"
+               spellcheck="true"
+               role="textbox"
+               aria-multiline="true"
+               aria-label="Type your content here">
+            <p>Start typing here…</p>
+          </div>
+
+          <!-- Editor action bar -->
+          <div class="editor-footer">
+            <span class="editor-hint">Bold first-row cells are detected as <code>&lt;th scope="col"&gt;</code> table headers</span>
+            <button class="btn btn-primary" id="editor-convert-btn">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Convert to HTML
+            </button>
+          </div>
+        </div>
+
+        <div id="editor-status" class="status-bar hidden"></div>
+      </div>
+
+      <!-- ══ RESULT PANEL (shared by both modes) ══ -->
+      <section id="result-panel" class="result-panel hidden">
+        <div class="result-header">
+          <div class="file-info">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M10 2v4h3" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+            <span id="file-name-label">output</span>
+          </div>
+          <div class="action-group">
+            <button id="copy-btn" class="btn btn-ghost">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="4" y="4" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 11V2h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Copy HTML
+            </button>
+            <button id="dl-btn" class="btn btn-primary">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 10V2M7.5 10l-3-3M7.5 10l3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Download .txt
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="preview">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7s2.5-5 6-5 6 5 6 5-2.5 5-6 5-6-5-6-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+            Preview
+          </button>
+          <button class="tab" data-tab="code">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4.5 3L1 7l3.5 4M9.5 3L13 7l-3.5 4M8 2l-2 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            HTML code
+          </button>
+        </div>
+
+        <div id="preview-pane" class="pane preview-pane"></div>
+        <div id="code-pane" class="pane code-pane hidden"></div>
+
+        <div class="convert-again">
+          <button id="reset-btn" class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5a5 5 0 115 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M1.5 4v2.5h2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Convert another
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      Conversion happens entirely in your browser — no files are uploaded to any server.
+    </footer>
+  </div>
+
+  <div id="toast" class="toast hidden">Copied to clipboard!</div>
+
+  <script src="mammoth.min.js"></script>
+  <script src="xlsx.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
