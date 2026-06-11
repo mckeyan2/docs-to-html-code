@@ -290,15 +290,18 @@
     rule4_bToStrong(root);
     rule5_iEmToStrong(root);
     rule6_removeU(root);
+    ruleD_removeStrikethrough(root);   /* NEW: remove <s>/<del>/~~text~~ entirely */
     ruleA_noStrongInHeadings(root);
     ruleB_tableScope(root);
     ruleC_mergeConsecutiveStrong(root);
+    ruleE_strongWrapsAnchor(root);     /* NEW: <strong><a> not <a><strong>        */
 
     var s = root.innerHTML;
     s = s.replace(/<xml[\s\S]*?<\/xml>/gi, '');
     s = s.replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '');
     s = rule3_supSubEntities(s);
     s = rule2_phoneTel(s);
+    s = ruleF_fixFileUrls(s);          /* NEW: file:// href → correct web URL     */
     s = rule8_symbolEntities(s);
     s = rule10_bluecard(s);
     s = rule11_removeNbsp(s);
@@ -420,6 +423,105 @@
         next.parentNode.removeChild(next);
       }
     });
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Rule D — Remove strikethrough text entirely
+     Removes the element AND its inner text content completely.
+     Handles: <s>, <del>, <strike>
+     Also handles markdown-style ~~text~~ in text nodes.
+  ───────────────────────────────────────────────────────────── */
+  function ruleD_removeStrikethrough(root) {
+    /* Remove <s>, <del>, <strike> elements and all their content */
+    root.querySelectorAll('s, del, strike').forEach(function (el) {
+      el.parentNode.removeChild(el);
+    });
+
+    /* Remove markdown-style ~~text~~ from text nodes */
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var textNodes = [];
+    var node;
+    while ((node = walker.nextNode())) textNodes.push(node);
+    textNodes.forEach(function (tn) {
+      if (/~~[\s\S]*?~~/.test(tn.nodeValue)) {
+        tn.nodeValue = tn.nodeValue.replace(/~~[\s\S]*?~~/g, '');
+      }
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Rule E — <strong> must wrap <a>, never the other way around
+     Incorrect: <a href="..."><strong>text</strong></a>
+     Correct:   <strong><a href="...">text</a></strong>
+  ───────────────────────────────────────────────────────────── */
+  function ruleE_strongWrapsAnchor(root) {
+    /* Case: <a> contains a <strong> as its only meaningful child
+       → flip so <strong> is the outer element              */
+    root.querySelectorAll('a > strong').forEach(function (strong) {
+      var anchor = strong.parentNode;
+      if (anchor.nodeName !== 'A') return;
+
+      /* Check the anchor has no other non-whitespace children */
+      var otherContent = Array.prototype.slice.call(anchor.childNodes).filter(function (n) {
+        return n !== strong && !(n.nodeType === 3 && n.nodeValue.trim() === '');
+      });
+      if (otherContent.length > 0) return; /* mixed content — leave alone */
+
+      /* Flip: replace <a><strong>text</strong></a>
+               with   <strong><a>text</a></strong>  */
+      var newAnchor = anchor.ownerDocument.createElement('a');
+      Array.prototype.slice.call(anchor.attributes).forEach(function (attr) {
+        newAnchor.setAttribute(attr.name, attr.value);
+      });
+      while (strong.firstChild) newAnchor.appendChild(strong.firstChild);
+      strong.appendChild(newAnchor);
+      anchor.parentNode.replaceChild(strong, anchor);
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Rule F — Fix file:// URLs in <a href="...">
+     file:// links are broken local paths. We attempt to recover
+     the intended web URL from the path segments.
+
+     Strategy (in order):
+     1. Strip the file:// prefix and any leading drive/path junk.
+     2. Try to parse a recognisable domain from the remaining path.
+     3. If a domain-like segment is found, reconstruct as https://.
+     4. Otherwise fall back to removing the href entirely (href="#")
+        so the link text is kept but the broken URL is gone.
+  ───────────────────────────────────────────────────────────── */
+  function ruleF_fixFileUrls(html) {
+    return html.replace(/(<a\s[^>]*href\s*=\s*["'])file:\/\/([^"']*)(["'][^>]*>)/gi,
+      function (match, open, path, close) {
+        /* Normalise backslashes and split path segments */
+        var segments = path.replace(/\\/g, '/').split('/').filter(Boolean);
+
+        /* Walk segments looking for something that looks like a hostname
+           e.g. "www.google.com", "google.com", "internal.example.org"  */
+        var domain = null;
+        var domainIdx = -1;
+        for (var i = 0; i < segments.length; i++) {
+          /* Segment contains a dot and looks like a hostname */
+          if (/^[a-zA-Z0-9]([a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/.test(segments[i])) {
+            domain    = segments[i];
+            domainIdx = i;
+            break;
+          }
+        }
+
+        var fixedUrl;
+        if (domain) {
+          /* Rebuild: https://domain/rest/of/path */
+          var rest = segments.slice(domainIdx + 1).join('/');
+          fixedUrl = 'https://' + domain + (rest ? '/' + rest : '');
+        } else {
+          /* No recognisable domain — remove the broken href */
+          fixedUrl = '#';
+        }
+
+        return open + fixedUrl + close;
+      });
   }
 
   /* ─────────────────────────────────────────────────────────────
