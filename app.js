@@ -131,7 +131,7 @@
 
   editorBody.addEventListener('keyup',   updateToolbarState);
   editorBody.addEventListener('mouseup', updateToolbarState);
-  document.addEventListener('selectionchange', updateToolbarState);
+  editorBody.addEventListener('selectionchange', updateToolbarState);
 
   /* Ensure editor always has at least one block element */
   editorBody.addEventListener('keydown', function (e) {
@@ -282,7 +282,18 @@
   /* ══════════════════════════════════════════════════════════════
      HTML TRANSFORMER   (shared by DOCX + Editor paths)
      ══════════════════════════════════════════════════════════════ */
+  /* Global store for syntax fixes detected during the last conversion.
+     Populated by ruleG_fixSyntaxErrors(), read by buildTestSuite(). */
+  var lastSyntaxFixes = [];
+
   function transformHtml(html) {
+    lastSyntaxFixes = [];
+
+    /* ── Rule G: detect & fix unclosed tags / unmatched quotes BEFORE
+       parsing — the browser parser silently auto-corrects these, so we
+       compare before/after to know what was fixed.                     */
+    html = ruleG_fixSyntaxErrors(html);
+
     var doc  = new DOMParser().parseFromString('<div id="__r">' + html + '</div>', 'text/html');
     var root = doc.getElementById('__r');
 
@@ -306,6 +317,144 @@
     s = rule10_bluecard(s);
     s = rule11_removeNbsp(s);
     return s;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Rule G — Fix unclosed/mismatched quotes, brackets & tags
+     Runs on the RAW string BEFORE DOM parsing.
+
+     Detects and auto-fixes:
+       1. Unclosed attribute quotes  e.g.  <a href="https://x.com>Link</a>
+                                       →    <a href="https://x.com">Link</a>
+       2. Unclosed angle brackets    e.g.  <p>Text<p>More</p>
+                                       →    <p>Text</p><p>More</p>  (best-effort)
+       3. Unbalanced/mismatched closing tags (handled by browser re-parse,
+          but logged here for the test report)
+
+     Every fix is recorded in `lastSyntaxFixes`:
+       { type, before, after, lineNo }
+     ───────────────────────────────────────────────────────────── */
+  function ruleG_fixSyntaxErrors(html) {
+    var lines = html.split('\n');
+
+    /* ── Fix 1: unclosed attribute quotes ──────────────────────────
+       Pattern: an attr="value  (opening quote with no matching close
+       before the next > or end of line) → close the quote before >  */
+    lines = lines.map(function (line, idx) {
+      var fixed = line;
+
+      /* Find tags on this line */
+      fixed = fixed.replace(/<([a-zA-Z][a-zA-Z0-9]*)((?:\s+[^<>]*)?)>/g, function (full, tag, attrs) {
+        if (!attrs) return full;
+
+        /* Count quotes in attrs — odd count = unclosed quote */
+        var dq = (attrs.match(/"/g) || []).length;
+        var sq = (attrs.match(/'/g) || []).length;
+        var newAttrs = attrs;
+        var changed  = false;
+
+        if (dq % 2 === 1) {
+          /* Unclosed double quote — append one before end of attrs */
+          newAttrs = newAttrs.replace(/\s*$/, '') + '"';
+          changed = true;
+        }
+        if (sq % 2 === 1) {
+          newAttrs = newAttrs.replace(/\s*$/, '') + "'";
+          changed = true;
+        }
+
+        if (changed) {
+          lastSyntaxFixes.push({
+            type: 'Unclosed attribute quote',
+            before: full.trim(),
+            after:  ('<' + tag + newAttrs + '>').trim(),
+            lineNo: idx + 1
+          });
+          return '<' + tag + newAttrs + '>';
+        }
+        return full;
+      });
+
+      return fixed;
+    });
+
+    html = lines.join('\n');
+
+    /* ── Fix 2: detect raw stray '<' or '>' not part of a tag ──────
+       e.g. "5 < 10 and 10 > 5" inside text — these confuse the
+       parser. Escape them to entities only when they don't look like
+       a real tag (no following tag-name pattern).                    */
+    lines = html.split('\n');
+    lines = lines.map(function (line, idx) {
+      var fixed = line.replace(/<(?![a-zA-Z\/!])/g, function (m, offset) {
+        lastSyntaxFixes.push({
+          type: 'Stray "<" escaped to &lt;',
+          before: line.trim(),
+          after:  line.replace(/<(?![a-zA-Z\/!])/, '&lt;').trim(),
+          lineNo: idx + 1
+        });
+        return '&lt;';
+      });
+      return fixed;
+    });
+    html = lines.join('\n');
+
+    /* ── Fix 3: detect unclosed tags via running-balance scan ──────
+       For each block-level tag type, walk through ALL occurrences
+       of its open/close tags in document order and track a running
+       balance. Any open tag encountered while the previous one of
+       the same type is still "open" (balance was already >=1 and
+       another open arrives before a close) is flagged as missing
+       its closing tag — this is what the browser silently auto-closes.
+       Handles both same-line and multi-line cases.                    */
+    var BLOCK_TAGS = ['p','div','li','td','th','tr','h2','h3','h4','h5','h6'];
+    BLOCK_TAGS.forEach(function (tag) {
+      var tagRe = new RegExp('<(\\/?)' + tag + '((?:\\s[^>]*)?)>', 'gi');
+      var hLines = html.split('\n');
+      var openStack = []; /* stack of {lineNo, tagText} for currently-open tags */
+
+      hLines.forEach(function (line, idx) {
+        var m;
+        tagRe.lastIndex = 0;
+        while ((m = tagRe.exec(line)) !== null) {
+          var isClose = m[1] === '/';
+          var tagText = m[0]; /* e.g. "<p>" or "<p class=\"x\">" */
+          if (isClose) {
+            if (openStack.length) openStack.pop(); /* matched — close it */
+          } else {
+            /* An open tag arrives. If the SAME tag type is already open
+               (non-void block tags can't legally nest themselves without
+               a close), the previous one is missing its close tag.      */
+            if (openStack.length) {
+              var prev = openStack[openStack.length - 1];
+              lastSyntaxFixes.push({
+                type: 'Unclosed <' + tag + '> tag (auto-closed by parser)',
+                before: prev.tagText + ' \u2026 ' + tagText,
+                after:  prev.tagText + ' \u2026 </' + tag + '>' + tagText,
+                lineNo: prev.lineNo
+              });
+              openStack.pop();
+            }
+            openStack.push({ lineNo: idx + 1, tagText: tagText });
+          }
+        }
+      });
+
+      /* Any tag still open at end of document is also unclosed,
+         but the browser closes it at EOF — only flag if there's
+         more than one (the very last one is normal/expected).    */
+      while (openStack.length > 1) {
+        var leftover = openStack.shift();
+        lastSyntaxFixes.push({
+          type: 'Unclosed <' + tag + '> tag (auto-closed by parser)',
+          before: leftover.tagText + ' \u2026 (end of document)',
+          after:  leftover.tagText + ' \u2026 </' + tag + '>',
+          lineNo: leftover.lineNo
+        });
+      }
+    });
+
+    return html;
   }
 
   /* Rule 1 — h1 → h2 */
@@ -359,12 +508,11 @@
     root.querySelectorAll('b').forEach(function (el) { changeTag(el, 'strong'); });
   }
 
-  /* Rule 5 — <i>: short → <strong>, long → unwrap; <em> kept as-is (semantic emphasis) */
+  /* Rule 5 — <i>/<em>: short → <strong>, long → unwrap */
   function rule5_iEmToStrong(root) {
-    root.querySelectorAll('i').forEach(function (el) {
+    root.querySelectorAll('i, em').forEach(function (el) {
       el.textContent.trim().length > 120 ? unwrapElement(el) : changeTag(el, 'strong');
     });
-    /* <em> is semantically correct emphasis — leave it unchanged */
   }
 
   /* Rule 6 — remove <u> */
@@ -565,7 +713,8 @@
         th.setAttribute('scope', 'col');
       });
       var thead = table.ownerDocument.createElement('thead');
-      thead.appendChild(rows[0]); /* appendChild re-parents; no need to removeChild first */
+      rows[0].parentNode.removeChild(rows[0]);
+      thead.appendChild(rows[0]);
 
       /* Remaining rows → <tbody>, all cells stay <td> */
       var bodyRows = rows.slice(1);
@@ -677,7 +826,6 @@
           activateTab('preview');
           resultPanel.classList.remove('hidden');
           showStatus(uploadStatus, 'Converted successfully.', 'ok');
-          runPostConversionTests(indented, file.name);
         })
         .catch(function (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); });
     };
@@ -722,7 +870,6 @@
         activateTab('preview');
         resultPanel.classList.remove('hidden');
         showStatus(uploadStatus, 'Converted successfully.', 'ok');
-        runPostConversionTests(html, file.name);
       } catch (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); }
     };
     reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
@@ -776,7 +923,7 @@
     if (!state.htmlSource) return;
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([state.htmlSource], { type: 'text/plain;charset=utf-8' }));
-    a.download = state.baseName + '.html';
+    a.download = state.baseName + '.txt';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
 
@@ -807,140 +954,299 @@
   /* Normalise whitespace for robust comparisons */
   function normStr(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
 
+  /* ── findLines: return [{lineNo, content}] for every line matching regex ── */
+  function findLines(html, regex) {
+    var lines   = html.split('\n');
+    var hits    = [];
+    var reClone = new RegExp(regex.source, regex.flags || (regex.ignoreCase ? 'gi' : 'g'));
+    lines.forEach(function (line, idx) {
+      reClone.lastIndex = 0;
+      if (reClone.test(line)) {
+        hits.push({ lineNo: idx + 1, content: line.trim() });
+      }
+    });
+    return hits;
+  }
+
+  /* ── makeCheck: helper that builds a test entry with auto line detection ── */
+  function makeCheck(id, rule, name, regex, html) {
+    var hits = findLines(html, regex);
+    var ok   = hits.length === 0;
+    return {
+      id:     id,
+      rule:   rule,
+      name:   name,
+      pass:   ok,
+      status: ok ? 'pass' : 'fail',
+      lines:  hits           /* [{lineNo, content}] — empty when passing */
+    };
+  }
+
   /* All test definitions — input is always the CONVERTED output HTML */
-  function buildTestSuite(convertedHtml, sourceName) {
-    var h = convertedHtml;
+  function buildTestSuite(convertedHtml) {
+    var h     = convertedHtml;
+    var tests = [];
 
-    return [
-      /* ── Rule 1: no <h1> in output ─────────────────────────── */
-      { id:'R1', rule:'Rule 1', name:'No <h1> tags in output (h1 → h2)',
-        pass: !/<h1[\s>]/i.test(h) },
+    /* ── Rule 1: no <h1> ────────────────────────────────────────── */
+    tests.push(makeCheck('R1','Rule 1','No <h1> tags in output (h1 → h2)',
+      /<h1[\s>]/i, h));
 
-      /* ── Rule 4: no <b> tags ────────────────────────────────── */
-      { id:'R4', rule:'Rule 4', name:'No <b> tags in output (b → strong)',
-        pass: !/<b[\s>]/i.test(h) },
+    /* ── Rule 4: no <b> ─────────────────────────────────────────── */
+    tests.push(makeCheck('R4','Rule 4','No <b> tags in output (b → strong)',
+      /<b[\s>]/i, h));
 
-      /* ── Rule 5: no <i> or <em> tags ───────────────────────── */
-      { id:'R5', rule:'Rule 5', name:'No <i> or <em> tags in output',
-        pass: !/<(i|em)[\s>]/i.test(h) },
+    /* ── Rule 5: no <i> or <em> ─────────────────────────────────── */
+    tests.push(makeCheck('R5','Rule 5','No <i> or <em> tags in output',
+      /<(i|em)[\s>]/i, h));
 
-      /* ── Rule 6: no <u> tags ────────────────────────────────── */
-      { id:'R6', rule:'Rule 6', name:'No <u> tags in output (underline removed)',
-        pass: !/<u[\s>]/i.test(h) },
+    /* ── Rule 6: no <u> ─────────────────────────────────────────── */
+    tests.push(makeCheck('R6','Rule 6','No <u> tags in output (underline removed)',
+      /<u[\s>]/i, h));
 
-      /* ── Rule 7: no XML or MSO conditional comments ─────────── */
-      { id:'R7a', rule:'Rule 7', name:'No <xml>...</xml> blocks in output',
-        pass: !/<xml[\s\S]*?<\/xml>/i.test(h) },
-      { id:'R7b', rule:'Rule 7', name:'No MSO conditional comments in output',
-        pass: !/<!--\[if[\s\S]*?<!\[endif\]-->/i.test(h) },
+    /* ── Rule 7a: no <xml> ──────────────────────────────────────── */
+    tests.push(makeCheck('R7a','Rule 7','No <xml>...</xml> blocks in output',
+      /<xml[\s\S]*?<\/xml>/i, h));
 
-      /* ── Rule 8: symbol entities converted ─────────────────── */
-      { id:'R8a', rule:'Rule 8', name:'Literal © replaced with &copy; entity',
-        pass: !/©/.test(h) },
-      { id:'R8b', rule:'Rule 8', name:'Literal ® replaced with &reg; entity',
-        pass: !/®/.test(h) },
-      { id:'R8c', rule:'Rule 8', name:'Literal ™ replaced with &trade; entity',
-        pass: !/™/.test(h) },
+    /* ── Rule 7b: no MSO comments ───────────────────────────────── */
+    tests.push(makeCheck('R7b','Rule 7','No MSO conditional comments in output',
+      /<!--\[if[\s\S]*?<!\[endif\]-->/i, h));
 
-      /* ── Rule 9/B: table structure ──────────────────────────── */
-      { id:'R9a', rule:'Rule B', name:'Tables with bold headers use <th scope="col">',
-        pass: (function () {
-          /* Only fail if there is a <table> AND its first row has <strong>
-             cells but no <th scope="col"> — i.e. rule B should have fired */
-          if (!/<table/i.test(h)) return true; /* no tables — N/A → pass */
-          /* If any table has <thead> we know rule B ran correctly */
-          if (/<thead/i.test(h)) return true;
-          /* If there are tables but none with bold first rows, also fine */
-          var doc2 = new DOMParser().parseFromString('<div>' + h + '</div>', 'text/html');
-          var tables = doc2.querySelectorAll('table');
-          var anyBoldFirstRow = false;
-          tables.forEach(function (t) {
-            var rows = t.querySelectorAll('tr');
-            if (!rows.length) return;
-            var cells = rows[0].querySelectorAll('td,th');
-            if (cells.length && Array.prototype.every.call(cells, function (c) {
-              return c.querySelector('strong') !== null;
-            })) anyBoldFirstRow = true;
+    /* ── Rule 8: literal symbol characters ─────────────────────── */
+    tests.push(makeCheck('R8a','Rule 8','Literal © replaced with &copy;',
+      /©/, h));
+    tests.push(makeCheck('R8b','Rule 8','Literal ® replaced with &reg;',
+      /®/, h));
+    tests.push(makeCheck('R8c','Rule 8','Literal ™ replaced with &trade;',
+      /™/, h));
+
+    /* ── Rule B/9a: bold-header tables have <thead> ─────────────── */
+    /* Special case: needs DOM inspection — compute pass/lines manually */
+    (function () {
+      if (!/<table/i.test(h)) {
+        tests.push({ id:'R9a', rule:'Rule B', name:'Tables with bold headers use <th scope="col">', pass:true, status:'pass', lines:[] });
+        return;
+      }
+      if (/<thead/i.test(h)) {
+        tests.push({ id:'R9a', rule:'Rule B', name:'Tables with bold headers use <th scope="col">', pass:true, status:'pass', lines:[] });
+        return;
+      }
+      /* Check if any table has an all-bold first row (rule B should have fired) */
+      var doc2   = new DOMParser().parseFromString('<div>' + h + '</div>', 'text/html');
+      var tables = doc2.querySelectorAll('table');
+      var badLines = [];
+      var hLines   = h.split('\n');
+      tables.forEach(function (t) {
+        var rows  = t.querySelectorAll('tr');
+        if (!rows.length) return;
+        var cells = rows[0].querySelectorAll('td,th');
+        var allBold = cells.length > 0 && Array.prototype.every.call(cells, function (c) {
+          return c.querySelector('strong') !== null;
+        });
+        if (allBold) {
+          /* Find the line number of the <table> opening tag */
+          hLines.forEach(function (line, idx) {
+            if (/<table[\s>]/i.test(line)) {
+              badLines.push({ lineNo: idx + 1, content: line.trim() });
+            }
           });
-          return !anyBoldFirstRow; /* bold first row exists but no thead = fail */
-        })() },
-      { id:'R9b', rule:'Rule B', name:'No <th> without scope attribute in table output',
-        pass: (function () {
-          var thTags = h.match(/<th(\s[^>]*)?\/?>/gi) || [];
-          return thTags.every(function (tag) { return /\bscope\s*=/i.test(tag); });
-        })() },
+        }
+      });
+      tests.push({ id:'R9a', rule:'Rule B',
+        name:'Tables with bold headers use <th scope="col">',
+        pass: badLines.length === 0, status: badLines.length === 0 ? 'pass' : 'fail', lines: badLines });
+    })();
 
-      /* ── Rule 11: no &nbsp; ─────────────────────────────────── */
-      { id:'R11', rule:'Rule 11', name:'No &nbsp; entities in output',
-        pass: !/&nbsp;/i.test(h) },
+    /* ── Rule B/9b: no <th> without scope ──────────────────────── */
+    tests.push(makeCheck('R9b','Rule B','No <th> without scope attribute',
+      /<th(?!\s[^>]*scope)[^>]*>/i, h));
 
-      /* ── Rule A: no <strong> inside headings ────────────────── */
-      { id:'RA', rule:'Rule A', name:'No <strong> directly inside heading tags',
-        pass: !/<h[2-6][^>]*>\s*<strong/i.test(h) },
+    /* ── Rule 11: no &nbsp; ─────────────────────────────────────── */
+    tests.push(makeCheck('R11','Rule 11','No &nbsp; entities in output',
+      /&nbsp;/i, h));
 
-      /* ── Rule C: no adjacent/nested <strong> ────────────────── */
-      { id:'RC', rule:'Rule C', name:'No consecutive adjacent <strong> tags',
-        pass: !/<\/strong>\s*<strong/i.test(h) },
-      { id:'RC2', rule:'Rule C', name:'No nested <strong><strong> in output',
-        pass: !/<strong[^>]*>\s*<strong/i.test(h) },
+    /* ── Rule A: no <strong> inside headings ────────────────────── */
+    tests.push(makeCheck('RA','Rule A','No <strong> directly inside heading tags',
+      /<h[2-6][^>]*>\s*<strong/i, h));
 
-      /* ── Rule D: no strikethrough elements ──────────────────── */
-      { id:'RD', rule:'Rule D', name:'No <s>, <del>, or <strike> tags in output',
-        pass: !/<(s|del|strike)[\s>]/i.test(h) },
+    /* ── Rule C: no adjacent <strong> ──────────────────────────── */
+    tests.push(makeCheck('RC','Rule C','No consecutive adjacent <strong> tags',
+      /<\/strong>\s*<strong/i, h));
 
-      /* ── Rule E: <strong> wraps <a>, not reverse ─────────────── */
-      { id:'RE', rule:'Rule E', name:'No <a><strong> nesting — strong must wrap a',
-        pass: !/<a\s[^>]*>\s*<strong/i.test(h) },
+    /* ── Rule C: no nested <strong><strong> ─────────────────────── */
+    tests.push(makeCheck('RC2','Rule C','No nested <strong><strong> in output',
+      /<strong[^>]*>\s*<strong/i, h));
 
-      /* ── Rule F: no file:// URLs ─────────────────────────────── */
-      { id:'RF', rule:'Rule F', name:'No file:// URLs in href attributes',
-        pass: !/href\s*=\s*["']file:\/\//i.test(h) },
+    /* ── Rule D: no strikethrough tags ─────────────────────────── */
+    tests.push(makeCheck('RD','Rule D','No <s>, <del>, or <strike> tags in output',
+      /<(s|del|strike)[\s>]/i, h));
 
-      /* ── General: no inline style attributes ────────────────── */
-      { id:'GEN1', rule:'General', name:'No inline style= attributes in output',
-        pass: !/<[^>]+\sstyle\s*=/i.test(h) },
+    /* ── Rule E: no <a><strong> ─────────────────────────────────── */
+    tests.push(makeCheck('RE','Rule E','No <a><strong> nesting — strong must wrap a',
+      /<a\s[^>]*>\s*<strong/i, h));
 
-      /* ── General: no class attributes ───────────────────────── */
-      { id:'GEN2', rule:'General', name:'No class= attributes in output',
-        pass: !/<[^>]+\sclass\s*=/i.test(h) },
+    /* ── Rule F: no file:// hrefs ───────────────────────────────── */
+    tests.push(makeCheck('RF','Rule F','No file:// URLs in href attributes',
+      /href\s*=\s*["']file:\/\//i, h));
 
-      /* ── General: valid HTML structure ─────────────────────── */
-      { id:'GEN3', rule:'General', name:'Output is non-empty',
-        pass: h.trim().length > 0 },
+    /* ── General: no style= attributes ─────────────────────────── */
+    tests.push(makeCheck('GEN1','General','No inline style= attributes in output',
+      /<[^>]+\sstyle\s*=/i, h));
 
-      /* ── Source-specific: phone links use tel: protocol ──────── */
-      { id:'GEN4', rule:'Rule 2', name:'All <a href="tel:"> links use tel: protocol only',
-        pass: (function () {
-          var telLinks = h.match(/href\s*=\s*["']tel:[^"']*["']/gi) || [];
-          return telLinks.every(function (l) { return /^href\s*=\s*["']tel:[\d+]/.test(l); });
-        })() },
-    ];
+    /* ── General: no class= attributes ─────────────────────────── */
+    tests.push(makeCheck('GEN2','General','No class= attributes in output',
+      /<[^>]+\sclass\s*=/i, h));
+
+    /* ── General: output is non-empty ───────────────────────────── */
+    tests.push({ id:'GEN3', rule:'General', name:'Output is non-empty',
+      pass: h.trim().length > 0, status: h.trim().length > 0 ? 'pass' : 'fail', lines: [] });
+
+    /* ── Rule 2: tel: links are clean ───────────────────────────── */
+    (function () {
+      var telLinks = h.match(/href\s*=\s*["']tel:[^"']*["']/gi) || [];
+      var bad      = telLinks.filter(function (l) { return !/^href\s*=\s*["']tel:[\d+]/.test(l); });
+      var badLines = [];
+      if (bad.length) {
+        var hLines = h.split('\n');
+        hLines.forEach(function (line, idx) {
+          if (/href\s*=\s*["']tel:/i.test(line) && !/href\s*=\s*["']tel:[\d+]/.test(line)) {
+            badLines.push({ lineNo: idx + 1, content: line.trim() });
+          }
+        });
+      }
+      tests.push({ id:'GEN4', rule:'Rule 2',
+        name:'All tel: links use clean tel:digits format',
+        pass: bad.length === 0, status: bad.length === 0 ? 'pass' : 'fail', lines: badLines });
+    })();
+
+    /* ── Rule G: syntax errors auto-fixed (unclosed quotes/tags/brackets) ──
+       Status is 'fixed' (amber) rather than pass/fail — these are issues
+       that WERE present in the source but have been automatically
+       corrected during conversion.                                        */
+    if (lastSyntaxFixes.length === 0) {
+      tests.push({ id:'RG', rule:'Rule G', name:'No unclosed quotes, brackets, or tags detected',
+        pass: true, status: 'pass', lines: [] });
+    } else {
+      lastSyntaxFixes.forEach(function (fix, i) {
+        tests.push({
+          id: 'RG' + (i + 1),
+          rule: 'Rule G',
+          name: fix.type,
+          pass: true,            /* fixed, not failed — conversion still succeeds */
+          status: 'fixed',       /* distinct status for amber/purple highlighting */
+          lines: [{ lineNo: fix.lineNo, content: fix.before }],
+          fixedTo: fix.after
+        });
+      });
+    }
+
+    return tests;
   }
 
   /* Run tests against current output and show/enable the report button */
   function runPostConversionTests(convertedHtml, sourceName) {
-    state.testResults = buildTestSuite(convertedHtml, sourceName);
+    state.testResults = buildTestSuite(convertedHtml);   /* sourceName not needed by suite */
     state.testSource  = sourceName;
     state.testHtml    = convertedHtml;
 
-    var pass = state.testResults.filter(function (t) { return t.pass; }).length;
-    var fail = state.testResults.length - pass;
+    var fail  = state.testResults.filter(function (t) { return t.status === 'fail'; }).length;
+    var fixed = state.testResults.filter(function (t) { return t.status === 'fixed'; }).length;
+    var pass  = state.testResults.filter(function (t) { return t.status === 'pass'; }).length;
 
     /* Show the Test Report button */
     var rptBtn = document.getElementById('test-report-btn');
     if (rptBtn) {
       rptBtn.classList.remove('hidden');
-      /* Colour the button green (all pass) or amber (some fail) */
-      rptBtn.className = 'btn ' + (fail === 0 ? 'btn-report-pass' : 'btn-report-fail');
-      rptBtn.querySelector('.rpt-label').textContent =
-        fail === 0
-          ? '✓ Tests passed (' + pass + '/' + state.testResults.length + ')'
-          : '⚠ ' + fail + ' test' + (fail > 1 ? 's' : '') + ' failed — View Report';
+      /* Colour: red if any fail, amber if any auto-fixed (but no failures), green otherwise */
+      var cls = fail > 0 ? 'btn-report-fail' : (fixed > 0 ? 'btn-report-fixed' : 'btn-report-pass');
+      rptBtn.className = 'btn ' + cls;
+
+      var label;
+      if (fail > 0) {
+        label = '⚠ ' + fail + ' test' + (fail > 1 ? 's' : '') + ' failed — View Report';
+      } else if (fixed > 0) {
+        label = '🔧 ' + fixed + ' issue' + (fixed > 1 ? 's' : '') + ' auto-fixed — View Report';
+      } else {
+        label = '✓ Tests passed (' + pass + '/' + state.testResults.length + ')';
+      }
+      rptBtn.querySelector('.rpt-label').textContent = label;
     }
   }
 
-  /* ── Editor: run tests after conversion (with small delay to let DOM settle) ── */
+
+  /* ── Wire runPostConversionTests into both conversion paths ── */
+  /* Patch processDocx success handler */
+  var _origProcessDocx = processDocx;
+  function processDocx(file) {
+    state.baseName = file.name.replace(/\.docx$/i, '');
+    showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
+    resultPanel.classList.add('hidden');
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      mammoth.convertToHtml({ arrayBuffer: e.target.result })
+        .then(function (result) {
+          var transformed = transformHtml(result.value);
+          var indented    = indentHtml(transformed);
+          state.htmlSource      = indented;
+          fileLabel.textContent = file.name;
+          previewPane.innerHTML = transformed;
+          codePane.textContent  = indented;
+          activateTab('preview');
+          resultPanel.classList.remove('hidden');
+          showStatus(uploadStatus, 'Converted successfully.', 'ok');
+          runPostConversionTests(indented, file.name);
+        })
+        .catch(function (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); });
+    };
+    reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* Patch processExcel success handler */
+  var _origProcessExcel = processExcel;
+  function processExcel(file) {
+    state.baseName = file.name.replace(/\.[^.]+$/, '');
+    showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
+    resultPanel.classList.add('hidden');
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var wb  = XLSX.read(e.target.result, { type: 'array' });
+        var html = '';
+        wb.SheetNames.forEach(function (sName) {
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], { header:1, defval:'' });
+          var ne   = rows.filter(function (r) { return r.some(function (c) { return c !== '' && c != null; }); });
+          if (!ne.length) return;
+          var maxC = 0;
+          ne.forEach(function (r) { if (r.length > maxC) maxC = r.length; });
+          html += '<h2>' + escHtml(sName) + '</h2>\n<table>\n  <tbody>\n';
+          ne.forEach(function (row) {
+            html += '    <tr>\n';
+            for (var c = 0; c < maxC; c++)
+              html += '      <td>' + escHtml(row[c] !== undefined ? row[c] : '') + '</td>\n';
+            html += '    </tr>\n';
+          });
+          html += '  </tbody>\n</table>\n\n';
+        });
+        html = html.trim();
+        state.htmlSource      = html;
+        fileLabel.textContent = file.name;
+        previewPane.innerHTML = html;
+        codePane.textContent  = html;
+        activateTab('preview');
+        resultPanel.classList.remove('hidden');
+        showStatus(uploadStatus, 'Converted successfully.', 'ok');
+        runPostConversionTests(html, file.name);
+      } catch (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); }
+    };
+    reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* Patch editor convert handler — add test run after existing logic */
+  var origEditorClick = editorConvertBtn.onclick;
   editorConvertBtn.addEventListener('click', function () {
+    /* Tests run after state.htmlSource is set — use a tiny delay to let
+       the existing handler finish updating the DOM first */
     setTimeout(function () {
       if (state.htmlSource) {
         runPostConversionTests(state.htmlSource, 'Text Editor');
@@ -953,11 +1259,17 @@
     var tests    = state.testResults || [];
     var srcName  = state.testSource  || 'Unknown';
     var convHtml = state.testHtml    || '';
-    var pass     = tests.filter(function (t) { return t.pass; }).length;
-    var fail     = tests.length - pass;
+    var pass     = tests.filter(function (t) { return t.status === 'pass';  }).length;
+    var fail     = tests.filter(function (t) { return t.status === 'fail';  }).length;
+    var fixed    = tests.filter(function (t) { return t.status === 'fixed'; }).length;
     var pct      = tests.length ? Math.round(pass / tests.length * 100) : 0;
     var stamp    = new Date().toLocaleString();
-    var barColor = pct === 100 ? '#2d6a4f' : pct >= 70 ? '#d97706' : '#9b2c2c';
+    var barColor = fail > 0 ? '#9b2c2c' : (fixed > 0 ? '#7c4dab' : '#2d6a4f');
+
+    /* Colour map for the three statuses */
+    var COLOR = { pass: '#2d6a4f', fail: '#9b2c2c', fixed: '#7c4dab' };
+    var BG    = { pass: '',        fail: '#fff8f8', fixed: '#f6f0fc' };
+    var ICON  = { pass: '✓',       fail: '✗',       fixed: '🔧' };
 
     function eh(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -968,6 +1280,7 @@
       '<div style="display:flex;gap:2rem;padding:1.2rem 2rem;background:#fff;border-bottom:1px solid #e2e0d8;align-items:center;flex-wrap:wrap">'
       + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#1a1a18">' + tests.length + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Total Checks</div></div>'
       + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#2d6a4f">' + pass + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Passed</div></div>'
+      + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#7c4dab">' + fixed + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Auto-Fixed</div></div>'
       + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#9b2c2c">' + fail + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Failed</div></div>'
       + '<div style="flex:1;min-width:200px">'
       + '<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:4px">'
@@ -976,9 +1289,15 @@
       + '<div style="font-size:.72rem;color:#5a5952;text-transform:uppercase;letter-spacing:.3px">Pass rate</div>'
       + '</div>'
       + '<div style="margin-left:auto;font-size:.78rem;color:#9a9890">Source: <strong style="color:#1a1a18">' + eh(srcName) + '</strong><br>Generated: ' + stamp + '</div>'
+      + '</div>'
+      /* Legend */
+      + '<div style="display:flex;gap:1.5rem;padding:.6rem 2rem;background:#faf9f6;border-bottom:1px solid #e2e0d8;font-size:.75rem;color:#5a5952;flex-wrap:wrap">'
+      + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2d6a4f;margin-right:5px;vertical-align:middle"></span>Passed — no issue found</span>'
+      + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7c4dab;margin-right:5px;vertical-align:middle"></span>Auto-Fixed — unclosed quote/tag/bracket corrected automatically</span>'
+      + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#9b2c2c;margin-right:5px;vertical-align:middle"></span>Failed — needs attention</span>'
       + '</div>';
 
-    /* Grouped test rows */
+    /* Grouped test rows — include line numbers for failures/fixes */
     var groups = {};
     tests.forEach(function (t) {
       if (!groups[t.rule]) groups[t.rule] = [];
@@ -987,21 +1306,46 @@
 
     var tableRows = '';
     Object.keys(groups).forEach(function (rule) {
-      var gPass = groups[rule].filter(function (t) { return t.pass; }).length;
-      var gFail = groups[rule].length - gPass;
-      tableRows += '<tr style="background:#f0efe9"><td colspan="3" style="padding:.35rem .8rem;font-weight:700;font-size:.82rem">'
+      var gPass  = groups[rule].filter(function (t) { return t.status === 'pass';  }).length;
+      var gFail  = groups[rule].filter(function (t) { return t.status === 'fail';  }).length;
+      var gFixed = groups[rule].filter(function (t) { return t.status === 'fixed'; }).length;
+      tableRows += '<tr style="background:#f0efe9"><td colspan="4" style="padding:.35rem .8rem;font-weight:700;font-size:.82rem">'
         + eh(rule)
-        + ' <span style="font-weight:400;color:#2d6a4f;font-size:.78em">' + gPass + ' passed</span>'
-        + (gFail ? ' <span style="font-weight:400;color:#9b2c2c;font-size:.78em">/ ' + gFail + ' failed</span>' : '')
+        + (gPass  ? ' <span style="font-weight:400;color:#2d6a4f;font-size:.78em">' + gPass  + ' passed</span>' : '')
+        + (gFixed ? ' <span style="font-weight:400;color:#7c4dab;font-size:.78em">/ ' + gFixed + ' auto-fixed</span>' : '')
+        + (gFail  ? ' <span style="font-weight:400;color:#9b2c2c;font-size:.78em">/ ' + gFail  + ' failed</span>' : '')
         + '</td></tr>';
       groups[rule].forEach(function (t) {
-        var icon   = t.pass ? '✓' : '✗';
-        var colour = t.pass ? '#2d6a4f' : '#9b2c2c';
-        var rowBg  = t.pass ? '' : 'background:#fff8f8';
+        var status = t.status || (t.pass ? 'pass' : 'fail');
+        var icon   = ICON[status];
+        var colour = COLOR[status];
+        var rowBg  = BG[status] ? ('background:' + BG[status]) : '';
+
+        /* Build the line-number / diff cell */
+        var lineCell = '—';
+        if (status !== 'pass' && t.lines && t.lines.length) {
+          lineCell = t.lines.map(function (ln) {
+            var badge = '<span style="background:' + colour + ';color:#fff;font-family:monospace;font-size:.72rem;'
+              + 'padding:1px 6px;border-radius:3px;margin-right:5px">Line ' + ln.lineNo + '</span>';
+            var before = '<code style="font-size:.78rem;color:' + colour + ';word-break:break-all">'
+              + eh(ln.content.length > 120 ? ln.content.slice(0, 120) + '…' : ln.content)
+              + '</code>';
+            var afterRow = '';
+            if (status === 'fixed' && t.fixedTo) {
+              afterRow = '<br><span style="margin-left:48px;font-size:.72rem;color:#9a9890">→ fixed to: </span>'
+                + '<code style="font-size:.78rem;color:#2d6a4f;word-break:break-all">'
+                + eh(t.fixedTo.length > 120 ? t.fixedTo.slice(0, 120) + '…' : t.fixedTo)
+                + '</code>';
+            }
+            return '<span style="display:inline-block;margin-bottom:3px">' + badge + before + afterRow + '</span>';
+          }).join('<br>');
+        }
+
         tableRows += '<tr style="' + rowBg + '">'
-          + '<td style="text-align:center;font-weight:700;color:' + colour + ';width:32px">' + icon + '</td>'
-          + '<td style="font-family:monospace;font-size:.78rem;color:#5a5952;width:60px">' + eh(t.id) + '</td>'
-          + '<td style="font-size:.85rem">' + eh(t.name) + '</td>'
+          + '<td style="text-align:center;font-weight:700;color:' + colour + ';width:32px;vertical-align:top">' + icon + '</td>'
+          + '<td style="font-family:monospace;font-size:.78rem;color:#5a5952;width:60px;vertical-align:top">' + eh(t.id) + '</td>'
+          + '<td style="font-size:.85rem;vertical-align:top">' + eh(t.name) + '</td>'
+          + '<td style="font-size:.82rem;vertical-align:top">' + lineCell + '</td>'
           + '</tr>';
       });
     });
