@@ -382,15 +382,21 @@ body {
 .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
 .btn-sm        { padding: 5px 10px; font-size: 12px; }
 
-/* Test report button — green when all pass, amber when some fail */
+/* Test report button — three states: pass (green), fixed (purple), fail (red) */
 .btn-report-pass {
   background: var(--excel-color, #1d7044);
   color: #fff;
   border: none;
 }
 .btn-report-pass:hover { opacity: .85; }
+.btn-report-fixed {
+  background: #7c4dab;
+  color: #fff;
+  border: none;
+}
+.btn-report-fixed:hover { opacity: .85; }
 .btn-report-fail {
-  background: #d97706;
+  background: #9b2c2c;
   color: #fff;
   border: none;
 }
