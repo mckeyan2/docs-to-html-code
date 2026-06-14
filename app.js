@@ -131,7 +131,7 @@
 
   editorBody.addEventListener('keyup',   updateToolbarState);
   editorBody.addEventListener('mouseup', updateToolbarState);
-  editorBody.addEventListener('selectionchange', updateToolbarState);
+  document.addEventListener('selectionchange', updateToolbarState);
 
   /* Ensure editor always has at least one block element */
   editorBody.addEventListener('keydown', function (e) {
@@ -359,11 +359,12 @@
     root.querySelectorAll('b').forEach(function (el) { changeTag(el, 'strong'); });
   }
 
-  /* Rule 5 — <i>/<em>: short → <strong>, long → unwrap */
+  /* Rule 5 — <i>: short → <strong>, long → unwrap; <em> kept as-is (semantic emphasis) */
   function rule5_iEmToStrong(root) {
-    root.querySelectorAll('i, em').forEach(function (el) {
+    root.querySelectorAll('i').forEach(function (el) {
       el.textContent.trim().length > 120 ? unwrapElement(el) : changeTag(el, 'strong');
     });
+    /* <em> is semantically correct emphasis — leave it unchanged */
   }
 
   /* Rule 6 — remove <u> */
@@ -564,8 +565,7 @@
         th.setAttribute('scope', 'col');
       });
       var thead = table.ownerDocument.createElement('thead');
-      rows[0].parentNode.removeChild(rows[0]);
-      thead.appendChild(rows[0]);
+      thead.appendChild(rows[0]); /* appendChild re-parents; no need to removeChild first */
 
       /* Remaining rows → <tbody>, all cells stay <td> */
       var bodyRows = rows.slice(1);
@@ -677,6 +677,7 @@
           activateTab('preview');
           resultPanel.classList.remove('hidden');
           showStatus(uploadStatus, 'Converted successfully.', 'ok');
+          runPostConversionTests(indented, file.name);
         })
         .catch(function (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); });
     };
@@ -721,6 +722,7 @@
         activateTab('preview');
         resultPanel.classList.remove('hidden');
         showStatus(uploadStatus, 'Converted successfully.', 'ok');
+        runPostConversionTests(html, file.name);
       } catch (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); }
     };
     reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
@@ -774,7 +776,7 @@
     if (!state.htmlSource) return;
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([state.htmlSource], { type: 'text/plain;charset=utf-8' }));
-    a.download = state.baseName + '.txt';
+    a.download = state.baseName + '.html';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
 
@@ -791,6 +793,267 @@
     resultPanel.classList.add('hidden');
     uploadStatus.classList.add('hidden');
     editorStatus.classList.add('hidden');
+    /* Hide test report button when result is cleared */
+    var rptBtn = document.getElementById('test-report-btn');
+    if (rptBtn) rptBtn.classList.add('hidden');
   });
+
+  /* ══════════════════════════════════════════════════════════════
+     POST-CONVERSION TEST ENGINE
+     Runs a suite of checks against the converted HTML output and
+     stores results so the user can download a full report.
+     ══════════════════════════════════════════════════════════════ */
+
+  /* Normalise whitespace for robust comparisons */
+  function normStr(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+
+  /* All test definitions — input is always the CONVERTED output HTML */
+  function buildTestSuite(convertedHtml, sourceName) {
+    var h = convertedHtml;
+
+    return [
+      /* ── Rule 1: no <h1> in output ─────────────────────────── */
+      { id:'R1', rule:'Rule 1', name:'No <h1> tags in output (h1 → h2)',
+        pass: !/<h1[\s>]/i.test(h) },
+
+      /* ── Rule 4: no <b> tags ────────────────────────────────── */
+      { id:'R4', rule:'Rule 4', name:'No <b> tags in output (b → strong)',
+        pass: !/<b[\s>]/i.test(h) },
+
+      /* ── Rule 5: no <i> or <em> tags ───────────────────────── */
+      { id:'R5', rule:'Rule 5', name:'No <i> or <em> tags in output',
+        pass: !/<(i|em)[\s>]/i.test(h) },
+
+      /* ── Rule 6: no <u> tags ────────────────────────────────── */
+      { id:'R6', rule:'Rule 6', name:'No <u> tags in output (underline removed)',
+        pass: !/<u[\s>]/i.test(h) },
+
+      /* ── Rule 7: no XML or MSO conditional comments ─────────── */
+      { id:'R7a', rule:'Rule 7', name:'No <xml>...</xml> blocks in output',
+        pass: !/<xml[\s\S]*?<\/xml>/i.test(h) },
+      { id:'R7b', rule:'Rule 7', name:'No MSO conditional comments in output',
+        pass: !/<!--\[if[\s\S]*?<!\[endif\]-->/i.test(h) },
+
+      /* ── Rule 8: symbol entities converted ─────────────────── */
+      { id:'R8a', rule:'Rule 8', name:'Literal © replaced with &copy; entity',
+        pass: !/©/.test(h) },
+      { id:'R8b', rule:'Rule 8', name:'Literal ® replaced with &reg; entity',
+        pass: !/®/.test(h) },
+      { id:'R8c', rule:'Rule 8', name:'Literal ™ replaced with &trade; entity',
+        pass: !/™/.test(h) },
+
+      /* ── Rule 9/B: table structure ──────────────────────────── */
+      { id:'R9a', rule:'Rule B', name:'Tables with bold headers use <th scope="col">',
+        pass: (function () {
+          /* Only fail if there is a <table> AND its first row has <strong>
+             cells but no <th scope="col"> — i.e. rule B should have fired */
+          if (!/<table/i.test(h)) return true; /* no tables — N/A → pass */
+          /* If any table has <thead> we know rule B ran correctly */
+          if (/<thead/i.test(h)) return true;
+          /* If there are tables but none with bold first rows, also fine */
+          var doc2 = new DOMParser().parseFromString('<div>' + h + '</div>', 'text/html');
+          var tables = doc2.querySelectorAll('table');
+          var anyBoldFirstRow = false;
+          tables.forEach(function (t) {
+            var rows = t.querySelectorAll('tr');
+            if (!rows.length) return;
+            var cells = rows[0].querySelectorAll('td,th');
+            if (cells.length && Array.prototype.every.call(cells, function (c) {
+              return c.querySelector('strong') !== null;
+            })) anyBoldFirstRow = true;
+          });
+          return !anyBoldFirstRow; /* bold first row exists but no thead = fail */
+        })() },
+      { id:'R9b', rule:'Rule B', name:'No <th> without scope attribute in table output',
+        pass: (function () {
+          var thTags = h.match(/<th(\s[^>]*)?\/?>/gi) || [];
+          return thTags.every(function (tag) { return /\bscope\s*=/i.test(tag); });
+        })() },
+
+      /* ── Rule 11: no &nbsp; ─────────────────────────────────── */
+      { id:'R11', rule:'Rule 11', name:'No &nbsp; entities in output',
+        pass: !/&nbsp;/i.test(h) },
+
+      /* ── Rule A: no <strong> inside headings ────────────────── */
+      { id:'RA', rule:'Rule A', name:'No <strong> directly inside heading tags',
+        pass: !/<h[2-6][^>]*>\s*<strong/i.test(h) },
+
+      /* ── Rule C: no adjacent/nested <strong> ────────────────── */
+      { id:'RC', rule:'Rule C', name:'No consecutive adjacent <strong> tags',
+        pass: !/<\/strong>\s*<strong/i.test(h) },
+      { id:'RC2', rule:'Rule C', name:'No nested <strong><strong> in output',
+        pass: !/<strong[^>]*>\s*<strong/i.test(h) },
+
+      /* ── Rule D: no strikethrough elements ──────────────────── */
+      { id:'RD', rule:'Rule D', name:'No <s>, <del>, or <strike> tags in output',
+        pass: !/<(s|del|strike)[\s>]/i.test(h) },
+
+      /* ── Rule E: <strong> wraps <a>, not reverse ─────────────── */
+      { id:'RE', rule:'Rule E', name:'No <a><strong> nesting — strong must wrap a',
+        pass: !/<a\s[^>]*>\s*<strong/i.test(h) },
+
+      /* ── Rule F: no file:// URLs ─────────────────────────────── */
+      { id:'RF', rule:'Rule F', name:'No file:// URLs in href attributes',
+        pass: !/href\s*=\s*["']file:\/\//i.test(h) },
+
+      /* ── General: no inline style attributes ────────────────── */
+      { id:'GEN1', rule:'General', name:'No inline style= attributes in output',
+        pass: !/<[^>]+\sstyle\s*=/i.test(h) },
+
+      /* ── General: no class attributes ───────────────────────── */
+      { id:'GEN2', rule:'General', name:'No class= attributes in output',
+        pass: !/<[^>]+\sclass\s*=/i.test(h) },
+
+      /* ── General: valid HTML structure ─────────────────────── */
+      { id:'GEN3', rule:'General', name:'Output is non-empty',
+        pass: h.trim().length > 0 },
+
+      /* ── Source-specific: phone links use tel: protocol ──────── */
+      { id:'GEN4', rule:'Rule 2', name:'All <a href="tel:"> links use tel: protocol only',
+        pass: (function () {
+          var telLinks = h.match(/href\s*=\s*["']tel:[^"']*["']/gi) || [];
+          return telLinks.every(function (l) { return /^href\s*=\s*["']tel:[\d+]/.test(l); });
+        })() },
+    ];
+  }
+
+  /* Run tests against current output and show/enable the report button */
+  function runPostConversionTests(convertedHtml, sourceName) {
+    state.testResults = buildTestSuite(convertedHtml, sourceName);
+    state.testSource  = sourceName;
+    state.testHtml    = convertedHtml;
+
+    var pass = state.testResults.filter(function (t) { return t.pass; }).length;
+    var fail = state.testResults.length - pass;
+
+    /* Show the Test Report button */
+    var rptBtn = document.getElementById('test-report-btn');
+    if (rptBtn) {
+      rptBtn.classList.remove('hidden');
+      /* Colour the button green (all pass) or amber (some fail) */
+      rptBtn.className = 'btn ' + (fail === 0 ? 'btn-report-pass' : 'btn-report-fail');
+      rptBtn.querySelector('.rpt-label').textContent =
+        fail === 0
+          ? '✓ Tests passed (' + pass + '/' + state.testResults.length + ')'
+          : '⚠ ' + fail + ' test' + (fail > 1 ? 's' : '') + ' failed — View Report';
+    }
+  }
+
+  /* ── Editor: run tests after conversion (with small delay to let DOM settle) ── */
+  editorConvertBtn.addEventListener('click', function () {
+    setTimeout(function () {
+      if (state.htmlSource) {
+        runPostConversionTests(state.htmlSource, 'Text Editor');
+      }
+    }, 50);
+  });
+
+  /* ── Report download ─────────────────────────────────────────── */
+  function downloadTestReport() {
+    var tests    = state.testResults || [];
+    var srcName  = state.testSource  || 'Unknown';
+    var convHtml = state.testHtml    || '';
+    var pass     = tests.filter(function (t) { return t.pass; }).length;
+    var fail     = tests.length - pass;
+    var pct      = tests.length ? Math.round(pass / tests.length * 100) : 0;
+    var stamp    = new Date().toLocaleString();
+    var barColor = pct === 100 ? '#2d6a4f' : pct >= 70 ? '#d97706' : '#9b2c2c';
+
+    function eh(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* Summary scorecard */
+    var scorecard =
+      '<div style="display:flex;gap:2rem;padding:1.2rem 2rem;background:#fff;border-bottom:1px solid #e2e0d8;align-items:center;flex-wrap:wrap">'
+      + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#1a1a18">' + tests.length + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Total Checks</div></div>'
+      + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#2d6a4f">' + pass + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Passed</div></div>'
+      + '<div><div style="font-size:2rem;font-weight:800;font-family:monospace;color:#9b2c2c">' + fail + '</div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:#5a5952">Failed</div></div>'
+      + '<div style="flex:1;min-width:200px">'
+      + '<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:4px">'
+      + '<div style="flex:1;height:10px;background:#e2e0d8;border-radius:5px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:5px"></div></div>'
+      + '<span style="font-size:.85rem;font-weight:700;color:' + barColor + ';font-family:monospace">' + pct + '%</span></div>'
+      + '<div style="font-size:.72rem;color:#5a5952;text-transform:uppercase;letter-spacing:.3px">Pass rate</div>'
+      + '</div>'
+      + '<div style="margin-left:auto;font-size:.78rem;color:#9a9890">Source: <strong style="color:#1a1a18">' + eh(srcName) + '</strong><br>Generated: ' + stamp + '</div>'
+      + '</div>';
+
+    /* Grouped test rows */
+    var groups = {};
+    tests.forEach(function (t) {
+      if (!groups[t.rule]) groups[t.rule] = [];
+      groups[t.rule].push(t);
+    });
+
+    var tableRows = '';
+    Object.keys(groups).forEach(function (rule) {
+      var gPass = groups[rule].filter(function (t) { return t.pass; }).length;
+      var gFail = groups[rule].length - gPass;
+      tableRows += '<tr style="background:#f0efe9"><td colspan="3" style="padding:.35rem .8rem;font-weight:700;font-size:.82rem">'
+        + eh(rule)
+        + ' <span style="font-weight:400;color:#2d6a4f;font-size:.78em">' + gPass + ' passed</span>'
+        + (gFail ? ' <span style="font-weight:400;color:#9b2c2c;font-size:.78em">/ ' + gFail + ' failed</span>' : '')
+        + '</td></tr>';
+      groups[rule].forEach(function (t) {
+        var icon   = t.pass ? '✓' : '✗';
+        var colour = t.pass ? '#2d6a4f' : '#9b2c2c';
+        var rowBg  = t.pass ? '' : 'background:#fff8f8';
+        tableRows += '<tr style="' + rowBg + '">'
+          + '<td style="text-align:center;font-weight:700;color:' + colour + ';width:32px">' + icon + '</td>'
+          + '<td style="font-family:monospace;font-size:.78rem;color:#5a5952;width:60px">' + eh(t.id) + '</td>'
+          + '<td style="font-size:.85rem">' + eh(t.name) + '</td>'
+          + '</tr>';
+      });
+    });
+
+    /* Converted HTML snippet (first 3000 chars) */
+    var snippet = eh(convHtml.length > 3000 ? convHtml.slice(0, 3000) + '\n\n… (truncated)' : convHtml);
+
+    var report =
+      '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>'
+      + '<title>Conversion Test Report — ' + eh(srcName) + '</title>'
+      + '<style>'
+      + '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}'
+      + 'body{font-family:system-ui,-apple-system,sans-serif;background:#f7f6f3;color:#1a1a18;font-size:14px;line-height:1.6;}'
+      + 'header{background:#1a1a18;color:#f0efe9;padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}'
+      + '.brand{font-size:1.05rem;font-weight:800;font-family:monospace;letter-spacing:-.3px;}'
+      + '.brand span{color:#6fcf97;}'
+      + 'section{max-width:900px;margin:0 auto;padding:1.5rem 2rem 3rem;}'
+      + 'h2{font-size:.95rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#5a5952;margin:1.5rem 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid #e2e0d8;}'
+      + 'table{width:100%;border-collapse:collapse;font-size:.85rem;}'
+      + 'th{background:#1a1a18;color:#f0efe9;padding:.45rem .8rem;text-align:left;font-size:.78rem;text-transform:uppercase;letter-spacing:.3px;}'
+      + 'td{padding:.42rem .8rem;border-bottom:1px solid #e2e0d8;vertical-align:top;}'
+      + 'pre{background:#1a1a18;color:#a8d5a2;padding:1rem 1.25rem;border-radius:8px;font-size:.78rem;line-height:1.65;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin-top:.5rem;}'
+      + 'footer{text-align:center;padding:1.5rem;font-size:.75rem;color:#9a9890;border-top:1px solid #e2e0d8;}'
+      + '</style></head><body>'
+      + '<header>'
+      + '<div class="brand">doc<span>→</span>html <span style="font-weight:400;opacity:.5;font-size:.85rem">/ conversion test report</span></div>'
+      + '<span style="font-size:.75rem;opacity:.5">' + stamp + '</span>'
+      + '</header>'
+      + scorecard
+      + '<section>'
+      + '<h2>Test Results</h2>'
+      + '<table><thead><tr><th>Status</th><th>ID</th><th>Check</th></tr></thead><tbody>'
+      + tableRows
+      + '</tbody></table>'
+      + '<h2>Converted HTML Output</h2>'
+      + '<pre>' + snippet + '</pre>'
+      + '</section>'
+      + '<footer>doc→html Converter · Post-Conversion Test Report · ' + eh(srcName) + ' · ' + stamp + '</footer>'
+      + '</body></html>';
+
+    var blob = new Blob([report], { type: 'text/html;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'test-report-' + new Date().toISOString().slice(0, 10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* Expose for the onclick in index.html */
+  window.downloadTestReport = downloadTestReport;
 
 })();
