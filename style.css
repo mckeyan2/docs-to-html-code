@@ -382,6 +382,20 @@ body {
 .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
 .btn-sm        { padding: 5px 10px; font-size: 12px; }
 
+/* Test report button — green when all pass, amber when some fail */
+.btn-report-pass {
+  background: var(--excel-color, #1d7044);
+  color: #fff;
+  border: none;
+}
+.btn-report-pass:hover { opacity: .85; }
+.btn-report-fail {
+  background: #d97706;
+  color: #fff;
+  border: none;
+}
+.btn-report-fail:hover { opacity: .85; }
+
 /* ─── Tabs ──────────────────────────────────────────────────────── */
 .tabs { display: flex; padding: 0 1.25rem; border-bottom: 0.5px solid var(--border); }
 .tab {

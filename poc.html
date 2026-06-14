@@ -79,6 +79,32 @@
     .feat h3{font-size:.95rem;font-weight:700;margin-bottom:.3rem;}
     .feat p{font-size:.82rem;color:#5a5952;line-height:1.5;}
 
+    /* ── TEST REPORT ── */
+    .report-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem;margin-bottom:3rem;align-items:start;}
+    @media(max-width:780px){.report-grid{grid-template-columns:1fr;}}
+
+    .scorecard{display:flex;gap:1.5rem;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);flex-wrap:wrap;align-items:center;margin-bottom:1rem;}
+    .score-num{font-size:1.6rem;font-weight:800;font-family:var(--mono);line-height:1;}
+    .score-label{font-size:.7rem;color:#5a5952;text-transform:uppercase;letter-spacing:.4px;}
+    .score-pass{color:var(--green);}
+    .score-fail{color:var(--accent);}
+    .pct-bar{flex:1;min-width:140px;height:8px;background:#e2e0d8;border-radius:4px;overflow:hidden;}
+    .pct-fill{height:100%;background:var(--green);border-radius:4px;}
+    .pct-fill.warn{background:#d97706;}
+
+    .check-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .check-item{display:flex;align-items:flex-start;gap:.6rem;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.82rem;}
+    .check-item:last-child{border-bottom:none;}
+    .check-icon{font-weight:700;flex-shrink:0;width:1.2rem;text-align:center;}
+    .check-icon.ok{color:var(--green);}
+    .check-icon.bad{color:var(--accent);}
+    .check-name{flex:1;}
+    .check-line{font-family:var(--mono);font-size:.7rem;background:var(--accent);color:#fff;padding:1px 7px;border-radius:10px;flex-shrink:0;}
+    .check-rule{font-family:var(--mono);font-size:.7rem;color:#9a9890;flex-shrink:0;}
+
+    .report-dl{margin-top:1rem;display:inline-flex;align-items:center;gap:6px;padding:.6rem 1.2rem;background:var(--green);color:#fff;border:none;border-radius:6px;font-weight:600;font-size:.85rem;cursor:pointer;transition:opacity .15s;text-decoration:none;}
+    .report-dl:hover{opacity:.85;}
+
     /* ── FOOTER ── */
     footer{background:var(--ink);color:rgba(240,239,233,.5);text-align:center;padding:1.25rem;font-size:.78rem;}
   </style>
@@ -109,6 +135,7 @@
     <div class="step"><div class="step-num">1</div><h3>Choose Input</h3><p>Upload a .docx / .xlsx / .csv file via drag-and-drop, or switch to the built-in rich text editor.</p></div>
     <div class="step"><div class="step-num">2</div><h3>Auto Convert</h3><p>14 transformation rules run instantly — headings, bold detection, tables, phone links, strikethrough removal, link nesting, URL fixing and more.</p></div>
     <div class="step"><div class="step-num">3</div><h3>Copy or Download</h3><p>Switch between Preview and HTML code tabs. Copy to clipboard or download as a .txt file.</p></div>
+    <div class="step"><div class="step-num">4</div><h3>Verify with Tests</h3><p>21 automated checks run on every conversion. Download a full HTML test report with line-numbered error details.</p></div>
   </div>
 
   <!-- LIVE DEMO -->
@@ -164,6 +191,53 @@
     </tbody>
   </table>
 
+  <!-- TEST REPORT -->
+  <div class="section-title">Post-Conversion Test Report</div>
+  <div class="section-sub">Every conversion automatically runs 21 checks against the output. Download a full HTML report with line-numbered error locations.</div>
+
+  <div class="report-grid">
+    <div>
+      <div class="scorecard">
+        <div><div class="score-num" style="color:var(--ink)">21</div><div class="score-label">Total Checks</div></div>
+        <div><div class="score-num score-pass">19</div><div class="score-label">Passed</div></div>
+        <div><div class="score-num score-fail">2</div><div class="score-label">Failed</div></div>
+        <div class="pct-bar"><div class="pct-fill warn" style="width:90%"></div></div>
+        <span style="font-family:var(--mono);font-weight:700;color:#d97706;font-size:.85rem">90%</span>
+      </div>
+
+      <div class="check-list">
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;h1&gt; tags in output (h1 → h2)</span><span class="check-rule">Rule 1</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;b&gt; tags in output (b → strong)</span><span class="check-rule">Rule 4</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;u&gt; tags in output (underline removed)</span><span class="check-rule">Rule 6</span></div>
+        <div class="check-item"><span class="check-icon bad">✗</span><span class="check-name">No &amp;nbsp; entities in output</span><span class="check-line">Line 14</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;s&gt;, &lt;del&gt;, or &lt;strike&gt; tags</span><span class="check-rule">Rule D</span></div>
+        <div class="check-item"><span class="check-icon bad">✗</span><span class="check-name">No &lt;a&gt;&lt;strong&gt; nesting — strong must wrap a</span><span class="check-line">Line 27</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No file:// URLs in href attributes</span><span class="check-rule">Rule F</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No inline style= attributes in output</span><span class="check-rule">General</span></div>
+      </div>
+
+      <a class="report-dl" href="#" onclick="return false">⬇ Download Full Test Report (.html)</a>
+    </div>
+
+    <div>
+      <div class="feat" style="margin-bottom:1rem">
+        <div class="feat-icon">🧪</div>
+        <h3>21 Automated Checks</h3>
+        <p>Covers all 14 conversion rules plus general checks: no leftover styles, no class attributes, valid tel: links, and non-empty output.</p>
+      </div>
+      <div class="feat" style="margin-bottom:1rem">
+        <div class="feat-icon">📍</div>
+        <h3>Line-Numbered Errors</h3>
+        <p>Every failed check points to the exact line number and snippet in the converted HTML — no manual searching required.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📄</div>
+        <h3>Standalone HTML Report</h3>
+        <p>The report is a self-contained file with a scorecard, pass/fail breakdown grouped by rule, and the full converted HTML — ready to share or archive.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- FEATURES -->
   <div class="section-title">Key Features</div>
   <div class="section-sub">Everything you need for clean, production-ready HTML output.</div>
@@ -174,6 +248,7 @@
     <div class="feat"><div class="feat-icon">🏷️</div><h3>Semantic Tables</h3><p>Bold first rows automatically become <code>&lt;th scope="col"&gt;</code> with proper <code>&lt;thead&gt;</code> and <code>&lt;tbody&gt;</code>.</p></div>
     <div class="feat"><div class="feat-icon">📋</div><h3>Copy & Download</h3><p>One-click copy to clipboard or download as .txt. Preview rendered output alongside the code.</p></div>
     <div class="feat"><div class="feat-icon">🌙</div><h3>Dark Mode</h3><p>Automatically adapts to your system's light or dark preference using CSS custom properties.</p></div>
+    <div class="feat"><div class="feat-icon">🧪</div><h3>Built-in Test Suite</h3><p>21 automated checks validate every conversion. Failed checks report the exact line number for fast debugging.</p></div>
   </div>
 </div>
 
