@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>doc→html — Conversion Test Suite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f7f6f3;
+      --surface:     #ffffff;
+      --surface-2:   #f0efe9;
+      --border:      #e2e0d8;
+      --text:        #1a1a18;
+      --text-2:      #5a5952;
+      --text-3:      #9a9890;
+      --accent:      #1a1a18;
+      --green:       #2d6a3f;
+      --green-bg:    #edf7f0;
+      --green-border:#b7ddc4;
+      --red:         #9b2c2c;
+      --red-bg:      #fff0f0;
+      --red-border:  #f5c0c0;
+      --yellow:      #7a5f00;
+      --yellow-bg:   #fffbeb;
+      --yellow-border:#e8d88a;
+      --font-ui:     system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono:   'Menlo', 'Consolas', 'Monaco', monospace;
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   14px;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.07);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:          #111110;
+        --surface:     #1c1c1a;
+        --surface-2:   #252523;
+        --border:      #2e2e2b;
+        --text:        #f0efe9;
+        --text-2:      #9a9890;
+        --text-3:      #5a5952;
+        --accent:      #f0efe9;
+        --green:       #4ade80;
+        --green-bg:    #0d2418;
+        --green-border:#1e4d2d;
+        --red:         #f87171;
+        --red-bg:      #2a0f0f;
+        --red-border:  #5a2020;
+        --yellow:      #fcd34d;
+        --yellow-bg:   #1a1200;
+        --yellow-border:#4a3800;
+      }
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.75rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      transition: color .15s, background .15s;
+    }
+    .back-link:hover { color: var(--text); background: var(--surface-2); }
+
+    .page-title { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
+    .page-subtitle { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+    /* ── Summary bar ── */
+    #summary-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: .9rem 1.25rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .summary-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .stat-num {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1;
+    }
+    .stat-pass  { color: var(--green); }
+    .stat-fail  { color: var(--red); }
+    .stat-total { color: var(--text-2); }
+    .summary-divider { width: 1px; height: 24px; background: var(--border); }
+
+    .run-btn {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .run-btn:hover  { opacity: .85; }
+    .run-btn:active { transform: scale(.97); }
+
+    /* ── Group ── */
+    .test-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: .6rem;
+    }
+
+    .group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-3);
+    }
+
+    .group-rule {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      color: var(--text-2);
+    }
+
+    .group-badge {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-left: auto;
+    }
+
+    /* ── Test card ── */
+    .test-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: .5rem;
+      box-shadow: var(--shadow-sm);
+      transition: border-color .2s;
+    }
+    .test-card.pass { border-color: var(--green-border); }
+    .test-card.fail { border-color: var(--red-border); }
+
+    .test-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: .7rem 1rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .test-status {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .test-card.pass .test-status { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .test-card.fail .test-status { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+    .test-card.pending .test-status { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border); }
+
+    .test-name {
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+    }
+    .test-card.fail .test-name { color: var(--red); }
+    .test-card.pass .test-name { color: var(--text); }
+
+    .test-toggle {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      transition: transform .2s;
+    }
+    .test-card.open .test-toggle { transform: rotate(180deg); }
+
+    .test-body {
+      display: none;
+      padding: 0 1rem 1rem;
+      border-top: 0.5px solid var(--border);
+    }
+    .test-card.open .test-body { display: block; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .5rem;
+      margin-top: .75rem;
+    }
+    @media (max-width: 600px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    .detail-cell {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .6rem .8rem;
+    }
+    .detail-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-3);
+      margin-bottom: .3rem;
+    }
+    .detail-value {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.55;
+      color: var(--text);
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .detail-cell.pass .detail-value { color: var(--green); }
+    .detail-cell.fail .detail-value { color: var(--red); }
+
+    .diff-note {
+      margin-top: .6rem;
+      padding: .5rem .75rem;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      background: var(--red-bg);
+      border: 0.5px solid var(--red-border);
+      color: var(--red);
+      font-family: var(--font-mono);
+    }
+
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M8 2L3 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to converter
+      </a>
+      <div>
+        <div class="page-title">Conversion Test Suite</div>
+        <div class="page-subtitle">Verifies all HTML transform rules run correctly</div>
+      </div>
+    </header>
+
+    <div id="summary-bar">
+      <div class="summary-stat">
+        <span class="stat-num stat-pass" id="count-pass">—</span>
+        <span style="color:var(--text-2);font-size:13px;">passed</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <span class="stat-num stat-fail" id="count-fail">—</span>
+        <span style="color:var(--text-2);font-size:13px;">failed</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <span class="stat-num stat-total" id="count-total">—</span>
+        <span style="color:var(--text-2);font-size:13px;">total</span>
+      </div>
+      <button class="run-btn" id="run-btn" onclick="runAllTests()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M3 2.5l8 4-8 4V2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="currentColor"/>
+        </svg>
+        Run tests
+      </button>
+    </div>
+
+    <div id="test-container"></div>
+
+    <div class="footer">Tests run entirely in your browser — no data is sent anywhere.</div>
+  </div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     INLINE COPY OF ALL TRANSFORM FUNCTIONS FROM app.js
+     (Copied verbatim so tests run standalone without loading the full app)
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── DOM helpers ── */
+function changeTag(el, tag) {
+  var n = el.ownerDocument.createElement(tag);
+  Array.prototype.slice.call(el.attributes).forEach(function (a) { n.setAttribute(a.name, a.value); });
+  while (el.firstChild) n.appendChild(el.firstChild);
+  el.parentNode.replaceChild(n, el);
+  return n;
+}
+function unwrapElement(el) {
+  var p = el.parentNode;
+  while (el.firstChild) p.insertBefore(el.firstChild, el);
+  p.removeChild(el);
+}
+
+/* ── Rules ── */
+function rule1_headings(root) {
+  root.querySelectorAll('h1').forEach(function (el) { changeTag(el, 'h2'); });
+}
+
+function rule2_phoneTel(html) {
+  var PHONE_RE = /(\+?[\d][\d\s.\-()]{6,}[\d])/g;
+  var FAX_RE   = /\bfax\b/i;
+  var parts = html.split(/(<a[\s\S]*?<\/a>)/gi);
+  return parts.map(function (part) {
+    if (/^<a[\s\S]*<\/a>$/i.test(part)) return part;
+    return part.replace(/>([\s\S]*?)</g, function (m, text) {
+      var r = text.replace(PHONE_RE, function (ph, _m, offset, str) {
+        var before = str.slice(Math.max(0, offset - 60), offset);
+        var after  = str.slice(offset + ph.length, offset + ph.length + 20);
+        if (FAX_RE.test(before) || FAX_RE.test(after)) return ph;
+        return '<a href="tel:' + ph.replace(/[^\d+]/g, '') + '">' + ph + '</a>';
+      });
+      return '>' + r + '<';
+    });
+  }).join('');
+}
+
+var SUP_WHOLE = { 'SM':'&#8480;','TM':'&trade;','R':'&reg;','st':'<sup>st</sup>','nd':'<sup>nd</sup>','rd':'<sup>rd</sup>','th':'<sup>th</sup>' };
+var SUP_CHAR  = { '0':'&#x2070;','1':'&sup1;','2':'&sup2;','3':'&sup3;','4':'&#8308;','5':'&#8309;','6':'&#8310;','7':'&#8311;','8':'&#8312;','9':'&#8313;','a':'&#x1D43;','b':'&#x1D47;','c':'&#x1D9C;','d':'&#x1D48;','e':'&#x1D49;','f':'&#x1DA0;','g':'&#x1D4D;','h':'&#x02B0;','i':'&#x2071;','j':'&#x02B2;','k':'&#x1D4F;','l':'&#x02E1;','m':'&#x1D50;','n':'&#x207F;','o':'&#x1D52;','p':'&#x1D56;','r':'&#x02B3;','s':'&#x02E2;','t':'&#x1D57;','u':'&#x1D58;','v':'&#x1D5B;','w':'&#x02B7;','x':'&#x02E3;','y':'&#x02B8;','z':'&#x1DBB;','+':'&#x207A;','-':'&#x207B;','=':'&#x207C;','(':'&#x207D;',')':'&#x207E;' };
+var SUB_CHAR  = { '0':'&#x2080;','1':'&#x2081;','2':'&#x2082;','3':'&#x2083;','4':'&#x2084;','5':'&#x2085;','6':'&#x2086;','7':'&#x2087;','8':'&#x2088;','9':'&#x2089;','a':'&#x2090;','e':'&#x2091;','o':'&#x2092;','x':'&#x2093;','h':'&#x2095;','k':'&#x2096;','l':'&#x2097;','m':'&#x2098;','n':'&#x2099;','p':'&#x209A;','s':'&#x209B;','t':'&#x209C;','+':'&#x208A;','-':'&#x208B;','=':'&#x208C;','(':'&#x208D;',')':'&#x208E;' };
+
+function rule3_supSubEntities(html) {
+  html = html.replace(/<sup>([\s\S]*?)<\/sup>/gi, function (m, inner) {
+    var t = inner.trim();
+    if (SUP_WHOLE[t]) return SUP_WHOLE[t];
+    var out = t.split('').map(function (c) { return SUP_CHAR[c] || SUP_CHAR[c.toLowerCase()] || c; }).join('');
+    return out !== t ? out : m;
+  });
+  html = html.replace(/<sub>([\s\S]*?)<\/sub>/gi, function (m, inner) {
+    var t   = inner.trim();
+    var out = t.split('').map(function (c) { return SUB_CHAR[c] || SUB_CHAR[c.toLowerCase()] || c; }).join('');
+    return out !== t ? out : m;
+  });
+  return html;
+}
+
+function rule4_bToStrong(root) {
+  root.querySelectorAll('b').forEach(function (el) { changeTag(el, 'strong'); });
+}
+
+function rule5_iEmToStrong(root) {
+  root.querySelectorAll('i, em').forEach(function (el) {
+    el.textContent.trim().length > 120 ? unwrapElement(el) : changeTag(el, 'strong');
+  });
+}
+
+function rule6_removeU(root) {
+  root.querySelectorAll('u').forEach(function (el) { unwrapElement(el); });
+}
+
+function rule8_symbolEntities(html) {
+  html = html.replace(/®/g,'\u00AE').replace(/™/g,'\u2122').replace(/©/g,'\u00A9');
+  html = html.replace(/®/g,'&reg;').replace(/™/g,'&trade;').replace(/©/g,'&copy;');
+  html = html.replace(/\u2018/g,'&lsquo;').replace(/\u2019/g,'&rsquo;');
+  html = html.replace(/\u201C/g,'&ldquo;').replace(/\u201D/g,'&rdquo;');
+  html = html.replace(/(\w)'(\w)/g,'$1&apos;$2');
+  html = html.replace(/\(R\)/gi,'&reg;').replace(/\(TM\)/gi,'&trade;').replace(/\(C\)/gi,'&copy;');
+  return html;
+}
+
+function rule10_bluecard(html) {
+  return html.split(/(<a[\s\S]*?<\/a>)/gi).map(function (p) {
+    return /^<a[\s\S]*<\/a>$/i.test(p) ? p : p.replace(/\bBluecard\b(?!&reg;)/gi, function (m) { return m + '&reg;'; });
+  }).join('');
+}
+
+function rule11_removeNbsp(html) {
+  return html.replace(/&nbsp;/gi,' ').replace(/\u00A0/g,' ').replace(/ {2,}/g,' ');
+}
+
+function ruleA_noStrongInHeadings(root) {
+  root.querySelectorAll('h2 strong,h3 strong,h4 strong,h5 strong,h6 strong').forEach(function (el) { unwrapElement(el); });
+}
+
+function ruleB_tableScope(root) {
+  function cellIsBold(cell) {
+    var text = cell.textContent.trim();
+    if (!text) return false;
+    var strongs = Array.prototype.slice.call(cell.querySelectorAll('strong'));
+    if (!strongs.length) return false;
+    return strongs.map(function (s) { return s.textContent; }).join('').trim() === text;
+  }
+  function stripStrong(cell) {
+    Array.prototype.slice.call(cell.querySelectorAll('strong')).forEach(function (s) { unwrapElement(s); });
+  }
+  root.querySelectorAll('table').forEach(function (table) {
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+    if (!rows.length) return;
+    var headCells = Array.prototype.slice.call(rows[0].querySelectorAll('td, th'));
+    if (!headCells.length || !headCells.every(cellIsBold)) return;
+    headCells.forEach(function (cell) {
+      stripStrong(cell);
+      var th = changeTag(cell, 'th');
+      th.setAttribute('scope', 'col');
+    });
+    var thead = table.ownerDocument.createElement('thead');
+    rows[0].parentNode.removeChild(rows[0]);
+    thead.appendChild(rows[0]);
+    var bodyRows = rows.slice(1);
+    var tbody = table.ownerDocument.createElement('tbody');
+    bodyRows.forEach(function (tr) {
+      Array.prototype.slice.call(tr.querySelectorAll('th')).forEach(function (th) { changeTag(th, 'td'); });
+      tr.parentNode.removeChild(tr);
+      tbody.appendChild(tr);
+    });
+    while (table.firstChild) table.removeChild(table.firstChild);
+    table.appendChild(thead);
+    if (bodyRows.length) table.appendChild(tbody);
+  });
+}
+
+function ruleC_mergeConsecutiveStrong(root) {
+  root.querySelectorAll('strong strong').forEach(function (inner) { unwrapElement(inner); });
+  root.querySelectorAll('strong').forEach(function (el) {
+    var next = el.nextSibling, gap = null;
+    if (next && next.nodeType === 3 && next.nodeValue.trim() === '') { gap = next; next = next.nextSibling; }
+    if (next && next.nodeName === 'STRONG') {
+      if (gap) el.appendChild(gap);
+      while (next.firstChild) el.appendChild(next.firstChild);
+      next.parentNode.removeChild(next);
+    }
+  });
+}
+
+function ruleD_removeStrikethrough(root) {
+  root.querySelectorAll('s, del, strike').forEach(function (el) { el.parentNode.removeChild(el); });
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  var textNodes = [], node;
+  while ((node = walker.nextNode())) textNodes.push(node);
+  textNodes.forEach(function (tn) {
+    if (/~~[\s\S]*?~~/.test(tn.nodeValue)) tn.nodeValue = tn.nodeValue.replace(/~~[\s\S]*?~~/g, '');
+  });
+}
+
+function ruleE_strongWrapsAnchor(root) {
+  root.querySelectorAll('a > strong').forEach(function (strong) {
+    var anchor = strong.parentNode;
+    if (anchor.nodeName !== 'A') return;
+    var otherContent = Array.prototype.slice.call(anchor.childNodes).filter(function (n) {
+      return n !== strong && !(n.nodeType === 3 && n.nodeValue.trim() === '');
+    });
+    if (otherContent.length > 0) return;
+    var newAnchor = anchor.ownerDocument.createElement('a');
+    Array.prototype.slice.call(anchor.attributes).forEach(function (attr) { newAnchor.setAttribute(attr.name, attr.value); });
+    while (strong.firstChild) newAnchor.appendChild(strong.firstChild);
+    strong.appendChild(newAnchor);
+    anchor.parentNode.replaceChild(strong, anchor);
+  });
+}
+
+function ruleF_fixFileUrls(html) {
+  return html.replace(/(<a\s[^>]*href\s*=\s*["'])file:\/\/([^"']*)(["'][^>]*>)/gi,
+    function (match, open, path, close) {
+      var segments = path.replace(/\\/g, '/').split('/').filter(Boolean);
+      var domain = null, domainIdx = -1;
+      for (var i = 0; i < segments.length; i++) {
+        if (/^[a-zA-Z0-9]([a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/.test(segments[i])) { domain = segments[i]; domainIdx = i; break; }
+      }
+      var fixedUrl;
+      if (domain) {
+        var rest = segments.slice(domainIdx + 1).join('/');
+        fixedUrl = 'https://' + domain + (rest ? '/' + rest : '');
+      } else { fixedUrl = '#'; }
+      return open + fixedUrl + close;
+    });
+}
+
+function ruleD_mdStrikethrough(html) {
+  return html.replace(/~~[\s\S]*?~~/g, '');
+}
+
+/* ── Full pipeline helper ── */
+function transformHtml(html) {
+  var doc  = new DOMParser().parseFromString('<div id="__r">' + html + '</div>', 'text/html');
+  var root = doc.getElementById('__r');
+  rule1_headings(root);
+  rule4_bToStrong(root);
+  rule5_iEmToStrong(root);
+  rule6_removeU(root);
+  ruleD_removeStrikethrough(root);
+  ruleA_noStrongInHeadings(root);
+  ruleB_tableScope(root);
+  ruleC_mergeConsecutiveStrong(root);
+  ruleE_strongWrapsAnchor(root);
+  var s = root.innerHTML;
+  s = s.replace(/<xml[\s\S]*?<\/xml>/gi, '');
+  s = s.replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '');
+  s = rule3_supSubEntities(s);
+  s = rule2_phoneTel(s);
+  s = ruleF_fixFileUrls(s);
+  s = rule8_symbolEntities(s);
+  s = rule10_bluecard(s);
+  s = rule11_removeNbsp(s);
+  return s;
+}
+
+/* ── Sanitize editor HTML ── */
+function sanitizeEditorHtml(html) {
+  var doc  = new DOMParser().parseFromString('<div id="__s">' + html + '</div>', 'text/html');
+  var root = doc.getElementById('__s');
+  root.querySelectorAll('div').forEach(function (div) {
+    var hasBlock = div.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,pre,table');
+    if (hasBlock) { unwrapElement(div); } else { changeTag(div, 'p'); }
+  });
+  var spans = Array.prototype.slice.call(root.querySelectorAll('span')).reverse();
+  spans.forEach(function (span) {
+    var style = (span.getAttribute('style') || '').replace(/\s/g, '').toLowerCase();
+    if (!style) { unwrapElement(span); return; }
+    if (/font-weight\s*:\s*(bold|[7-9]\d{2})/.test(style)) { changeTag(span, 'b'); return; }
+    if (/font-style\s*:\s*italic/.test(style)) { changeTag(span, 'i'); return; }
+    if (/text-decoration[^;]*:\s*[^;]*underline/.test(style) && !/line-through/.test(style)) { changeTag(span, 'u'); return; }
+    if (/text-decoration[^;]*:\s*[^;]*line-through/.test(style)) { changeTag(span, 's'); return; }
+    if (/vertical-align\s*:\s*super/.test(style)) { changeTag(span, 'sup'); return; }
+    if (/vertical-align\s*:\s*sub/.test(style)) { changeTag(span, 'sub'); return; }
+    unwrapElement(span);
+  });
+  root.querySelectorAll('font').forEach(function (el) { unwrapElement(el); });
+  root.querySelectorAll('p, li, td, th, h2, h3, h4, h5, h6').forEach(function (el) {
+    if (el.childNodes.length === 1 && el.firstChild.nodeName === 'BR') el.removeChild(el.firstChild);
+  });
+  root.querySelectorAll('p').forEach(function (el) {
+    if (el.textContent.trim() === '' && !el.querySelector('br,img')) el.parentNode && el.parentNode.removeChild(el);
+  });
+  root.querySelectorAll('[style]').forEach(function (el) { el.removeAttribute('style'); });
+  root.querySelectorAll('[color],[face],[size],[bgcolor],[align],[valign],[width],[height],[cellpadding],[cellspacing],[border]').forEach(function (el) {
+    ['color','face','size','bgcolor','align','valign','width','height','cellpadding','cellspacing','border'].forEach(function (attr) { el.removeAttribute(attr); });
+  });
+  root.querySelectorAll('[class]').forEach(function (el) { el.removeAttribute('class'); });
+  return root.innerHTML;
+}
+</script>
+
+<!-- ══ TEST DEFINITIONS + RUNNER ══════════════════════════════════════ -->
+<script>
+/* ── tiny assertion helper ── */
+function normalize(s) {
+  return s.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/* Each test: { group, rule, name, run: fn → { pass, input, output, expected, note? } } */
+var TESTS = [
+
+  /* ══ RULE 1 — h1 → h2 ══════════════════════════════════════════ */
+  {
+    group: 'Headings', rule: 'Rule 1',
+    name: 'Converts <h1> to <h2>',
+    run: function() {
+      var out = transformHtml('<h1>Title</h1>');
+      var pass = /<h2>title<\/h2>/i.test(out) && !/<h1>/i.test(out);
+      return { pass: pass, input: '<h1>Title</h1>', output: out, expected: '<h2>Title</h2>' };
+    }
+  },
+  {
+    group: 'Headings', rule: 'Rule 1',
+    name: 'Preserves <h2> through <h6> unchanged',
+    run: function() {
+      var inp = '<h2>A</h2><h3>B</h3><h4>C</h4><h5>D</h5><h6>E</h6>';
+      var out = transformHtml(inp);
+      var pass = /<h2>a<\/h2>/i.test(out) && /<h3>b<\/h3>/i.test(out) && !/<h1>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'h2–h6 tags unchanged' };
+    }
+  },
+
+  /* ══ RULE 4 — <b> → <strong> ═══════════════════════════════════ */
+  {
+    group: 'Bold / Strong', rule: 'Rule 4',
+    name: 'Converts <b> to <strong>',
+    run: function() {
+      var out = transformHtml('<p><b>hello</b></p>');
+      var pass = /<strong>hello<\/strong>/i.test(out) && !/<b>/i.test(out);
+      return { pass: pass, input: '<p><b>hello</b></p>', output: out, expected: '<p><strong>hello</strong></p>' };
+    }
+  },
+
+  /* ══ RULE 5 — <i>/<em> handling ════════════════════════════════ */
+  {
+    group: 'Italic / Em', rule: 'Rule 5',
+    name: 'Short <i> text (≤120 chars) → <strong>',
+    run: function() {
+      var out = transformHtml('<p><i>short italic</i></p>');
+      var pass = /<strong>short italic<\/strong>/i.test(out) && !/<i>/i.test(out);
+      return { pass: pass, input: '<p><i>short italic</i></p>', output: out, expected: '<p><strong>short italic</strong></p>' };
+    }
+  },
+  {
+    group: 'Italic / Em', rule: 'Rule 5',
+    name: 'Long <i> text (>120 chars) is unwrapped (tag stripped)',
+    run: function() {
+      var longText = 'This is a very long italic sentence that clearly exceeds one hundred and twenty characters in total length right here yes indeed!';
+      var inp = '<p><i>' + longText + '</i></p>';
+      var out = transformHtml(inp);
+      var pass = !/<i>/i.test(out) && !/<em>/i.test(out) && !/<strong>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'tag stripped, text kept' };
+    }
+  },
+  {
+    group: 'Italic / Em', rule: 'Rule 5',
+    name: 'Short <em> → <strong>',
+    run: function() {
+      var out = transformHtml('<p><em>word</em></p>');
+      var pass = /<strong>word<\/strong>/i.test(out);
+      return { pass: pass, input: '<p><em>word</em></p>', output: out, expected: '<p><strong>word</strong></p>' };
+    }
+  },
+
+  /* ══ RULE 6 — remove <u> ════════════════════════════════════════ */
+  {
+    group: 'Underline removal', rule: 'Rule 6',
+    name: 'Removes <u> tag but keeps text',
+    run: function() {
+      var out = transformHtml('<p><u>underlined</u></p>');
+      var pass = !/<u>/i.test(out) && /underlined/.test(out);
+      return { pass: pass, input: '<p><u>underlined</u></p>', output: out, expected: '<p>underlined</p>' };
+    }
+  },
+
+  /* ══ RULE D — strikethrough removal ════════════════════════════ */
+  {
+    group: 'Strikethrough', rule: 'Rule D',
+    name: 'Removes <s> element entirely (text gone)',
+    run: function() {
+      var inp = '<p>Keep <s>delete me</s> this.</p>';
+      var out = transformHtml(inp);
+      var pass = !/delete me/.test(out) && /keep/i.test(out) && /this/.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'delete me removed; surrounding text kept' };
+    }
+  },
+  {
+    group: 'Strikethrough', rule: 'Rule D',
+    name: 'Removes <del> element entirely',
+    run: function() {
+      var inp = '<p>Before <del>gone</del> after.</p>';
+      var out = transformHtml(inp);
+      var pass = !/gone/.test(out);
+      return { pass: pass, input: inp, output: out, expected: '"gone" removed' };
+    }
+  },
+  {
+    group: 'Strikethrough', rule: 'Rule D',
+    name: 'Removes markdown ~~text~~ in text nodes',
+    run: function() {
+      var inp = '<p>Hello ~~world~~ there</p>';
+      var out = transformHtml(inp);
+      var pass = !/world/.test(out) && !/~~/.test(out) && /hello/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: '"world" and tildes removed' };
+    }
+  },
+
+  /* ══ RULE A — no <strong> in headings ══════════════════════════ */
+  {
+    group: 'Headings', rule: 'Rule A',
+    name: 'Removes <strong> inside <h2> (unwraps)',
+    run: function() {
+      var inp = '<h2><strong>Bold heading</strong></h2>';
+      var out = transformHtml(inp);
+      var pass = /<h2>bold heading<\/h2>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: '<h2>Bold heading</h2>' };
+    }
+  },
+  {
+    group: 'Headings', rule: 'Rule A',
+    name: 'Removes <strong> inside <h3>',
+    run: function() {
+      var inp = '<h3><strong>Sub</strong></h3>';
+      var out = transformHtml(inp);
+      var pass = /<h3>sub<\/h3>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: '<h3>Sub</h3>' };
+    }
+  },
+
+  /* ══ RULE B — table scope ═══════════════════════════════════════ */
+  {
+    group: 'Tables', rule: 'Rule B',
+    name: 'All-bold first row → <thead> with <th scope="col">',
+    run: function() {
+      var inp = '<table><tr><td><strong>Name</strong></td><td><strong>Age</strong></td></tr><tr><td>Alice</td><td>30</td></tr></table>';
+      var out = transformHtml(inp);
+      var pass = /<thead>/i.test(out) && /<th scope="col">name<\/th>/i.test(out) && /<tbody>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'thead with th[scope=col] + tbody' };
+    }
+  },
+  {
+    group: 'Tables', rule: 'Rule B',
+    name: 'Mixed-bold first row → table unchanged (no thead)',
+    run: function() {
+      var inp = '<table><tr><td><strong>Name</strong></td><td>Age</td></tr><tr><td>Alice</td><td>30</td></tr></table>';
+      var out = transformHtml(inp);
+      var pass = !/<thead>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'no thead inserted' };
+    }
+  },
+
+  /* ══ RULE C — merge consecutive <strong> ═══════════════════════ */
+  {
+    group: 'Strong merging', rule: 'Rule C',
+    name: 'Adjacent <strong> siblings are merged into one',
+    run: function() {
+      var inp = '<p><strong>Hello</strong><strong> world</strong></p>';
+      var out = transformHtml(inp);
+      var strongMatches = out.match(/<strong>/gi) || [];
+      var pass = strongMatches.length === 1;
+      return { pass: pass, input: inp, output: out, expected: 'single <strong>Hello world</strong>' };
+    }
+  },
+  {
+    group: 'Strong merging', rule: 'Rule C',
+    name: 'Nested <strong><strong> is unwrapped to one',
+    run: function() {
+      var inp = '<p><strong><strong>nested</strong></strong></p>';
+      var out = transformHtml(inp);
+      var strongMatches = out.match(/<strong>/gi) || [];
+      var pass = strongMatches.length === 1 && /nested/.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'single <strong>nested</strong>' };
+    }
+  },
+
+  /* ══ RULE E — <strong> wraps <a> ════════════════════════════════ */
+  {
+    group: 'Link / Strong order', rule: 'Rule E',
+    name: '<a><strong>text</strong></a> becomes <strong><a>text</a></strong>',
+    run: function() {
+      var inp = '<p><a href="https://example.com"><strong>click me</strong></a></p>';
+      var out = transformHtml(inp);
+      var pass = /<strong><a href="https:\/\/example\.com">click me<\/a><\/strong>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: '<strong><a href="...">click me</a></strong>' };
+    }
+  },
+
+  /* ══ RULE F — fix file:// URLs ══════════════════════════════════ */
+  {
+    group: 'URL fixing', rule: 'Rule F',
+    name: 'file:// URL with domain segment → https://',
+    run: function() {
+      var inp = '<p><a href="file://C:/Users/john/www.example.com/page">link</a></p>';
+      var out = transformHtml(inp);
+      var pass = /href="https:\/\/www\.example\.com\/page"/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'href="https://www.example.com/page"' };
+    }
+  },
+  {
+    group: 'URL fixing', rule: 'Rule F',
+    name: 'file:// URL with no domain → href="#"',
+    run: function() {
+      var inp = '<p><a href="file:///C:/local/file.html">link</a></p>';
+      var out = transformHtml(inp);
+      var pass = /href="#"/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'href="#"' };
+    }
+  },
+
+  /* ══ RULE 2 — phone → tel: links ════════════════════════════════ */
+  {
+    group: 'Phone links', rule: 'Rule 2',
+    name: 'Phone number in text gets a tel: link',
+    run: function() {
+      var inp = '<p>Call us: 800-555-1234</p>';
+      var out = transformHtml(inp);
+      var pass = /href="tel:\+?8005551234"/i.test(out) || /href="tel:8005551234"/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: '<a href="tel:8005551234">...</a>' };
+    }
+  },
+  {
+    group: 'Phone links', rule: 'Rule 2',
+    name: 'Fax number is NOT turned into a tel: link',
+    run: function() {
+      var inp = '<p>Fax: 800-555-9999</p>';
+      var out = transformHtml(inp);
+      var pass = !/href="tel:/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'no tel: link for fax number' };
+    }
+  },
+  {
+    group: 'Phone links', rule: 'Rule 2',
+    name: 'Existing <a href> links are not double-wrapped',
+    run: function() {
+      var inp = '<p><a href="tel:5551234567">555-123-4567</a></p>';
+      var out = transformHtml(inp);
+      var anchors = (out.match(/<a /gi) || []).length;
+      var pass = anchors === 1;
+      return { pass: pass, input: inp, output: out, expected: 'exactly one <a> tag' };
+    }
+  },
+
+  /* ══ RULE 3 — sup/sub entities ══════════════════════════════════ */
+  {
+    group: 'Sup / Sub entities', rule: 'Rule 3',
+    name: '<sup>TM</sup> → &trade; entity',
+    run: function() {
+      var out = transformHtml('<p>Brand<sup>TM</sup></p>');
+      var pass = /&trade;/.test(out) && !/<sup>tm<\/sup>/i.test(out);
+      return { pass: pass, input: '<p>Brand<sup>TM</sup></p>', output: out, expected: 'Brand&trade;' };
+    }
+  },
+  {
+    group: 'Sup / Sub entities', rule: 'Rule 3',
+    name: '<sup>R</sup> → &reg; entity',
+    run: function() {
+      var out = transformHtml('<p>Brand<sup>R</sup></p>');
+      var pass = /&reg;/.test(out) && !/<sup>r<\/sup>/i.test(out);
+      return { pass: pass, input: '<p>Brand<sup>R</sup></p>', output: out, expected: 'Brand&reg;' };
+    }
+  },
+  {
+    group: 'Sup / Sub entities', rule: 'Rule 3',
+    name: '<sup>2</sup> → unicode superscript character entity',
+    run: function() {
+      var out = transformHtml('<p>x<sup>2</sup></p>');
+      var pass = /&sup2;/.test(out) && !/<sup>2<\/sup>/i.test(out);
+      return { pass: pass, input: '<p>x<sup>2</sup></p>', output: out, expected: 'x&sup2;' };
+    }
+  },
+  {
+    group: 'Sup / Sub entities', rule: 'Rule 3',
+    name: '<sub>2</sub> → unicode subscript character entity',
+    run: function() {
+      var out = transformHtml('<p>H<sub>2</sub>O</p>');
+      var pass = /&#x2082;/.test(out) && !/<sub>2<\/sub>/i.test(out);
+      return { pass: pass, input: '<p>H<sub>2</sub>O</p>', output: out, expected: 'H&#x2082;O' };
+    }
+  },
+
+  /* ══ RULE 8 — symbol entities ════════════════════════════════════ */
+  {
+    group: 'Symbol entities', rule: 'Rule 8',
+    name: '(R) → &reg;',
+    run: function() {
+      var out = transformHtml('<p>Brand(R)</p>');
+      var pass = /&reg;/.test(out);
+      return { pass: pass, input: '<p>Brand(R)</p>', output: out, expected: 'Brand&reg;' };
+    }
+  },
+  {
+    group: 'Symbol entities', rule: 'Rule 8',
+    name: '(TM) → &trade;',
+    run: function() {
+      var out = transformHtml('<p>Logo(TM)</p>');
+      var pass = /&trade;/.test(out);
+      return { pass: pass, input: '<p>Logo(TM)</p>', output: out, expected: 'Logo&trade;' };
+    }
+  },
+  {
+    group: 'Symbol entities', rule: 'Rule 8',
+    name: 'Curly open-quote → &ldquo;',
+    run: function() {
+      var out = transformHtml('<p>\u201CHello\u201D</p>');
+      var pass = /&ldquo;/.test(out) && /&rdquo;/.test(out);
+      return { pass: pass, input: '<p>\u201CHello\u201D</p>', output: out, expected: '&ldquo;Hello&rdquo;' };
+    }
+  },
+  {
+    group: 'Symbol entities', rule: 'Rule 8',
+    name: "Apostrophe in contractions → &apos;",
+    run: function() {
+      var out = transformHtml("<p>it's great</p>");
+      var pass = /&apos;/.test(out);
+      return { pass: pass, input: "<p>it's great</p>", output: out, expected: "it&apos;s great" };
+    }
+  },
+
+  /* ══ RULE 10 — Bluecard® ═════════════════════════════════════════ */
+  {
+    group: 'Bluecard®', rule: 'Rule 10',
+    name: 'Appends &reg; to Bluecard when not already present',
+    run: function() {
+      var out = transformHtml('<p>The Bluecard program</p>');
+      var pass = /Bluecard&reg;/.test(out);
+      return { pass: pass, input: '<p>The Bluecard program</p>', output: out, expected: 'Bluecard&reg; program' };
+    }
+  },
+  {
+    group: 'Bluecard®', rule: 'Rule 10',
+    name: 'Does NOT double-append &reg; if already present',
+    run: function() {
+      var inp = '<p>The Bluecard&reg; plan</p>';
+      var out = transformHtml(inp);
+      var count = (out.match(/&reg;/g) || []).length;
+      var pass = count === 1;
+      return { pass: pass, input: inp, output: out, expected: 'exactly one &reg;' };
+    }
+  },
+  {
+    group: 'Bluecard®', rule: 'Rule 10',
+    name: 'Bluecard inside an <a> link is NOT modified',
+    run: function() {
+      var inp = '<p><a href="https://example.com">Bluecard</a></p>';
+      var out = transformHtml(inp);
+      /* rule10 skips content inside <a> tags */
+      var pass = !/<a[^>]*>Bluecard&reg;<\/a>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'Bluecard inside <a> left unchanged' };
+    }
+  },
+
+  /* ══ RULE 11 — remove &nbsp; ════════════════════════════════════ */
+  {
+    group: '&nbsp; removal', rule: 'Rule 11',
+    name: '&nbsp; replaced with regular space',
+    run: function() {
+      var out = transformHtml('<p>hello&nbsp;world</p>');
+      var pass = !/&nbsp;/.test(out) && /hello world/.test(out);
+      return { pass: pass, input: '<p>hello&nbsp;world</p>', output: out, expected: 'hello world (regular space)' };
+    }
+  },
+  {
+    group: '&nbsp; removal', rule: 'Rule 11',
+    name: 'Multiple consecutive spaces collapsed to one',
+    run: function() {
+      var out = rule11_removeNbsp('hello   world');
+      var pass = out === 'hello world';
+      return { pass: pass, input: 'hello   world', output: out, expected: 'hello world' };
+    }
+  },
+
+  /* ══ SANITIZE EDITOR HTML ═══════════════════════════════════════ */
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'Browser <div> blocks converted to <p>',
+    run: function() {
+      var out = sanitizeEditorHtml('<div>Hello</div>');
+      var pass = /<p>hello<\/p>/i.test(out) && !/<div>/i.test(out);
+      return { pass: pass, input: '<div>Hello</div>', output: out, expected: '<p>Hello</p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'font-weight:bold span → <b>',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><span style="font-weight:bold">hi</span></p>');
+      var pass = /<b>hi<\/b>/i.test(out) && !/<span/i.test(out);
+      return { pass: pass, input: '<p><span style="font-weight:bold">hi</span></p>', output: out, expected: '<p><b>hi</b></p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'font-style:italic span → <i>',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><span style="font-style:italic">hi</span></p>');
+      var pass = /<i>hi<\/i>/i.test(out);
+      return { pass: pass, input: '<p><span style="font-style:italic">hi</span></p>', output: out, expected: '<p><i>hi</i></p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'text-decoration:underline span → <u>',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><span style="text-decoration:underline">hi</span></p>');
+      var pass = /<u>hi<\/u>/i.test(out);
+      return { pass: pass, input: '<p><span style="text-decoration:underline">hi</span></p>', output: out, expected: '<p><u>hi</u></p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'text-decoration:line-through span → <s>',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><span style="text-decoration:line-through">hi</span></p>');
+      var pass = /<s>hi<\/s>/i.test(out);
+      return { pass: pass, input: '<p><span style="text-decoration:line-through">hi</span></p>', output: out, expected: '<p><s>hi</s></p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'vertical-align:super span → <sup>',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><span style="vertical-align:super">2</span></p>');
+      var pass = /<sup>2<\/sup>/i.test(out);
+      return { pass: pass, input: '<p><span style="vertical-align:super">2</span></p>', output: out, expected: '<p><sup>2</sup></p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: '<font> tags are stripped (content kept)',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><font face="Arial" size="3">text</font></p>');
+      var pass = /text/.test(out) && !/<font/i.test(out);
+      return { pass: pass, input: '<p><font face="Arial">text</font></p>', output: out, expected: '<p>text</p>' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'All style attributes stripped from output',
+    run: function() {
+      var out = sanitizeEditorHtml('<p style="color:red;margin:0">text</p>');
+      var pass = !/style=/i.test(out);
+      return { pass: pass, input: '<p style="color:red">text</p>', output: out, expected: 'no style= attributes' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'Lone <br> as only child of <p> is removed',
+    run: function() {
+      var out = sanitizeEditorHtml('<p><br></p>');
+      var pass = !/<br>/i.test(out);
+      return { pass: pass, input: '<p><br></p>', output: out, expected: '<p></p> or empty (no <br>)' };
+    }
+  },
+  {
+    group: 'Editor sanitiser', rule: 'sanitizeEditorHtml',
+    name: 'Empty <p> tags removed',
+    run: function() {
+      var out = sanitizeEditorHtml('<p>text</p><p>   </p><p>more</p>');
+      var pass = (out.match(/<p>/gi) || []).length === 2;
+      return { pass: pass, input: '<p>text</p><p>   </p><p>more</p>', output: out, expected: 'two <p> tags (empty one removed)' };
+    }
+  },
+
+  /* ══ FULL PIPELINE INTEGRATION ══════════════════════════════════ */
+  {
+    group: 'Full pipeline', rule: 'integration',
+    name: 'Typical DOCX paragraph with bold inline text',
+    run: function() {
+      var inp = '<p>This is <b>important</b> and <i>noted</i>.</p>';
+      var out = transformHtml(inp);
+      var pass = /<strong>important<\/strong>/i.test(out) && /<strong>noted<\/strong>/i.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'both b and i → strong' };
+    }
+  },
+  {
+    group: 'Full pipeline', rule: 'integration',
+    name: 'Conditional comment and XML stripped',
+    run: function() {
+      var inp = '<!--[if gte mso 9]><xml>junk</xml><![endif]--><p>clean</p>';
+      var out = transformHtml(inp);
+      var pass = !/\[if/.test(out) && !/<xml/i.test(out) && /clean/.test(out);
+      return { pass: pass, input: inp, output: out, expected: 'MS Office noise stripped, content kept' };
+    }
+  },
+  {
+    group: 'Full pipeline', rule: 'integration',
+    name: 'Editor path: sanitize then transform gives clean output',
+    run: function() {
+      var editorHtml = '<div><b>Title</b></div><div>Body <u>text</u> here.</div>';
+      var sanitized = sanitizeEditorHtml(editorHtml);
+      var out = transformHtml(sanitized);
+      var pass = /<strong>title<\/strong>/i.test(out) && !/style=/i.test(out) && !/<u>/i.test(out) && /body/i.test(out);
+      return { pass: pass, input: editorHtml, output: out, expected: 'div→p, b→strong, u removed, no style attrs' };
+    }
+  }
+
+];
+
+/* ══ RUNNER ══════════════════════════════════════════════════════════ */
+function runAllTests() {
+  var container = document.getElementById('test-container');
+  container.innerHTML = '';
+
+  /* Group tests */
+  var groups = {};
+  TESTS.forEach(function(t) {
+    if (!groups[t.group]) groups[t.group] = [];
+    groups[t.group].push(t);
+  });
+
+  var totalPass = 0, totalFail = 0;
+  var results = [];
+
+  /* Execute all tests */
+  TESTS.forEach(function(t, idx) {
+    var result;
+    try {
+      result = t.run();
+    } catch(e) {
+      result = { pass: false, input: t.name, output: 'ERROR: ' + e.message, expected: '' };
+    }
+    results.push({ test: t, result: result });
+    if (result.pass) totalPass++; else totalFail++;
+  });
+
+  /* Render groups */
+  var rendered = {};
+  results.forEach(function(r, idx) {
+    var g = r.test.group;
+    if (!rendered[g]) {
+      rendered[g] = true;
+      var groupDiv = document.createElement('div');
+      groupDiv.className = 'test-group';
+      var groupResults = results.filter(function(rr) { return rr.test.group === g; });
+      var gPass = groupResults.filter(function(rr) { return rr.result.pass; }).length;
+      groupDiv.innerHTML = '<div class="group-header">' +
+        '<span class="group-label">' + escHtml(g) + '</span>' +
+        '<span class="group-rule">' + escHtml(r.test.rule) + '</span>' +
+        '<span class="group-badge">' + gPass + ' / ' + groupResults.length + '</span>' +
+        '</div>';
+      groupResults.forEach(function(rr) {
+        groupDiv.appendChild(buildCard(rr));
+      });
+      container.appendChild(groupDiv);
+    }
+  });
+
+  /* Update summary */
+  document.getElementById('count-pass').textContent  = totalPass;
+  document.getElementById('count-fail').textContent  = totalFail;
+  document.getElementById('count-total').textContent = totalPass + totalFail;
+
+  /* Scroll summary into view */
+  document.getElementById('summary-bar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function buildCard(r) {
+  var card = document.createElement('div');
+  var status = r.result.pass ? 'pass' : 'fail';
+  card.className = 'test-card ' + status;
+
+  var icon = r.result.pass ? '✓' : '✗';
+  card.innerHTML =
+    '<div class="test-head" onclick="toggleCard(this.parentNode)">' +
+      '<div class="test-status">' + icon + '</div>' +
+      '<div class="test-name">' + escHtml(r.test.name) + '</div>' +
+      '<div class="test-toggle">▾</div>' +
+    '</div>' +
+    '<div class="test-body">' +
+      '<div class="detail-grid">' +
+        '<div class="detail-cell"><div class="detail-label">Input</div><div class="detail-value">' + escHtml(r.result.input || '') + '</div></div>' +
+        '<div class="detail-cell"><div class="detail-label">Expected</div><div class="detail-value">' + escHtml(r.result.expected || '') + '</div></div>' +
+        '<div class="detail-cell ' + (r.result.pass ? 'pass' : 'fail') + '" style="grid-column:1/-1"><div class="detail-label">Actual output</div><div class="detail-value">' + escHtml(r.result.output || '') + '</div></div>' +
+      '</div>' +
+      (!r.result.pass ? '<div class="diff-note">✗ Output did not match expected pattern.</div>' : '') +
+    '</div>';
+
+  /* Auto-expand failing cards */
+  if (!r.result.pass) card.classList.add('open');
+
+  return card;
+}
+
+function toggleCard(card) {
+  card.classList.toggle('open');
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* Run automatically on load */
+window.addEventListener('DOMContentLoaded', runAllTests);
+</script>
+</body>
+</html>

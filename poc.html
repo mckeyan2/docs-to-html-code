@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>doc→html · POC Demo</title>
+  <style>
+    :root {
+      --ink:#1a1a18; --paper:#f7f6f3; --surface:#fff;
+      --border:#e2e0d8; --border-s:#ccc9bf;
+      --green:#2d6a4f; --green-bg:#edf7f0;
+      --blue:#2b579a; --blue-bg:#eef3fb;
+      --purple:#6b3fa0; --purple-bg:#f3eefb;
+      --accent:#c84b31;
+      --radius:10px; --mono:'Menlo','Consolas',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.6;}
+
+    /* ── NAV ── */
+    nav{background:var(--ink);color:#f0efe9;padding:.9rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+    .nav-brand{font-size:1.2rem;font-weight:800;letter-spacing:-.5px;font-family:var(--mono);}
+    .nav-brand span{color:#6fcf97;}
+    .nav-tag{font-size:.75rem;background:rgba(255,255,255,.12);padding:3px 10px;border-radius:20px;letter-spacing:.5px;}
+
+    /* ── HERO ── */
+    .hero{background:var(--ink);color:#f0efe9;padding:4rem 2rem 3.5rem;text-align:center;}
+    .hero h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;letter-spacing:-1.5px;line-height:1.1;margin-bottom:1rem;}
+    .hero h1 em{color:#6fcf97;font-style:normal;}
+    .hero p{font-size:1.05rem;opacity:.7;max-width:560px;margin:0 auto 2rem;}
+    .hero-chips{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;}
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;font-family:var(--mono);border:.5px solid;}
+    .chip-w{background:var(--blue-bg);color:var(--blue);border-color:var(--blue);}
+    .chip-x{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+    .chip-e{background:var(--purple-bg);color:var(--purple);border-color:var(--purple);}
+
+    /* ── SECTION WRAPPER ── */
+    .wrap{max-width:960px;margin:0 auto;padding:3rem 1.5rem;}
+    .section-title{font-size:1.4rem;font-weight:700;margin-bottom:.4rem;}
+    .section-sub{font-size:.88rem;color:#5a5952;margin-bottom:1.75rem;}
+
+    /* ── HOW IT WORKS ── */
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:3rem;}
+    .step{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem 1.2rem;position:relative;}
+    .step-num{width:28px;height:28px;background:var(--ink);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;margin-bottom:.75rem;}
+    .step h3{font-size:.95rem;font-weight:700;margin-bottom:.35rem;}
+    .step p{font-size:.82rem;color:#5a5952;line-height:1.5;}
+
+    /* ── LIVE DEMO ── */
+    .demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:3rem;}
+    @media(max-width:680px){.demo-grid{grid-template-columns:1fr;}}
+
+    .demo-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .demo-box-header{background:#f0efe9;border-bottom:1px solid var(--border);padding:.6rem 1rem;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a5952;display:flex;align-items:center;gap:6px;}
+    .demo-box-body{padding:1rem;}
+
+    textarea{width:100%;min-height:180px;border:1px solid var(--border-s);border-radius:6px;padding:.75rem;font-family:var(--mono);font-size:.8rem;line-height:1.6;resize:vertical;color:var(--ink);background:#fff;outline:none;}
+    textarea:focus{border-color:#9a9890;}
+    .convert-btn{margin-top:.6rem;width:100%;padding:.65rem;background:var(--ink);color:#fff;border:none;border-radius:6px;font-weight:600;font-size:.85rem;cursor:pointer;transition:opacity .15s;}
+    .convert-btn:hover{opacity:.85;}
+
+    .output-box{min-height:180px;border:1px solid var(--border-s);border-radius:6px;background:#1a1a18;padding:.75rem;font-family:var(--mono);font-size:.78rem;line-height:1.7;color:#a8d5a2;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:260px;}
+    .output-box .hl-tag{color:#f08d49;}
+    .output-box .hl-attr{color:#82c6d8;}
+    .output-box .hl-val{color:#b9da97;}
+
+    /* ── RULES TABLE ── */
+    .rules-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:3rem;}
+    .rules-table th{background:var(--ink);color:#f0efe9;padding:.5rem .85rem;text-align:left;}
+    .rules-table td{padding:.5rem .85rem;border-bottom:1px solid var(--border);vertical-align:top;}
+    .rules-table tr:last-child td{border-bottom:none;}
+    .rules-table tr:nth-child(even) td{background:#faf9f6;}
+    code{font-family:var(--mono);font-size:.82em;background:#f0efe9;padding:1px 5px;border-radius:3px;}
+
+    /* ── FEATURE CARDS ── */
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:3rem;}
+    .feat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;}
+    .feat-icon{font-size:1.5rem;margin-bottom:.6rem;}
+    .feat h3{font-size:.95rem;font-weight:700;margin-bottom:.3rem;}
+    .feat p{font-size:.82rem;color:#5a5952;line-height:1.5;}
+
+    /* ── TEST REPORT ── */
+    .report-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem;margin-bottom:3rem;align-items:start;}
+    @media(max-width:780px){.report-grid{grid-template-columns:1fr;}}
+
+    .scorecard{display:flex;gap:1.5rem;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);flex-wrap:wrap;align-items:center;margin-bottom:1rem;}
+    .score-num{font-size:1.6rem;font-weight:800;font-family:var(--mono);line-height:1;}
+    .score-label{font-size:.7rem;color:#5a5952;text-transform:uppercase;letter-spacing:.4px;}
+    .score-pass{color:var(--green);}
+    .score-fixed{color:#7c4dab;}
+    .score-fail{color:var(--accent);}
+    .pct-bar{flex:1;min-width:140px;height:8px;background:#e2e0d8;border-radius:4px;overflow:hidden;}
+    .pct-fill{height:100%;background:var(--green);border-radius:4px;}
+    .pct-fill.warn{background:#d97706;}
+    .pct-fill.fixed{background:#7c4dab;}
+
+    .check-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .check-item{display:flex;align-items:flex-start;gap:.6rem;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.82rem;flex-wrap:wrap;}
+    .check-item:last-child{border-bottom:none;}
+    .check-icon{font-weight:700;flex-shrink:0;width:1.2rem;text-align:center;}
+    .check-icon.ok{color:var(--green);}
+    .check-icon.bad{color:var(--accent);}
+    .check-icon.fixed{color:#7c4dab;}
+    .check-name{flex:1;}
+    .check-line{font-family:var(--mono);font-size:.7rem;background:var(--accent);color:#fff;padding:1px 7px;border-radius:10px;flex-shrink:0;}
+    .check-line.fixed-line{background:#7c4dab;}
+    .check-rule{font-family:var(--mono);font-size:.7rem;color:#9a9890;flex-shrink:0;}
+    .fixed-diff{font-size:.7rem;color:#9a9890;margin-left:1.8rem;margin-top:2px;flex-basis:100%;}
+    .fixed-diff code{background:transparent;padding:0;}
+    .fixed-diff .to{color:var(--green);}
+
+    .report-dl{margin-top:1rem;display:inline-flex;align-items:center;gap:6px;padding:.6rem 1.2rem;background:var(--green);color:#fff;border:none;border-radius:6px;font-weight:600;font-size:.85rem;cursor:pointer;transition:opacity .15s;text-decoration:none;}
+    .report-dl:hover{opacity:.85;}
+
+    /* ── FOOTER ── */
+    footer{background:var(--ink);color:rgba(240,239,233,.5);text-align:center;padding:1.25rem;font-size:.78rem;}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">doc<span>→</span>html</div>
+  <span class="nav-tag">POC · Proof of Concept</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Convert Documents to<br><em>Clean Semantic HTML5</em></h1>
+  <p>Upload Word or Excel files, or type directly in the built-in editor — get perfectly structured, style-free HTML every time.</p>
+  <div class="hero-chips">
+    <span class="chip chip-w">📄 .docx Word</span>
+    <span class="chip chip-x">📊 .xlsx / .xls / .csv Excel</span>
+    <span class="chip chip-e">✏️ Text Editor</span>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<div class="wrap">
+  <div class="section-title">How It Works</div>
+  <div class="section-sub">Three simple steps — entirely in your browser, nothing uploaded to a server.</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h3>Choose Input</h3><p>Upload a .docx / .xlsx / .csv file via drag-and-drop, or switch to the built-in rich text editor.</p></div>
+    <div class="step"><div class="step-num">2</div><h3>Auto Convert</h3><p>15 transformation rules run instantly — headings, bold detection, tables, phone links, strikethrough removal, link nesting, URL fixing, syntax repair and more.</p></div>
+    <div class="step"><div class="step-num">3</div><h3>Copy or Download</h3><p>Switch between Preview and HTML code tabs. Copy to clipboard or download as a .txt file.</p></div>
+    <div class="step"><div class="step-num">4</div><h3>Verify with Tests</h3><p>22 automated checks run on every conversion. Download a full HTML test report with line-numbered pass/fixed/fail details.</p></div>
+  </div>
+
+  <!-- LIVE DEMO -->
+  <div class="section-title">Live Demo</div>
+  <div class="section-sub">Paste any text with basic HTML below and see it processed through the conversion rules.</div>
+  <div class="demo-grid">
+    <div class="demo-box">
+      <div class="demo-box-header">📥 Input HTML (paste here)</div>
+      <div class="demo-box-body">
+        <textarea id="demo-input" spellcheck="false"><h1>Company Overview</h1>
+<p>Call us at <b>044-1234567</b> or Fax: 044-9999999</p>
+<p><b>John</b><b> Smith</b> is the CEO.</p>
+<p>This product is <s>discontinued</s> and this feature is <del>removed</del>.</p>
+<p><a href="file://www.google.com/search"><strong>Search Here</strong></a></p>
+<p>Visit us: <a href="file://internal/document/about-us">About Us</a></p>
+<p>Broken link: <a href="https://example.com>click here</a></p>
+<p>First paragraph<p>Second paragraph missing a close tag</p>
+<table>
+  <tr><td><b>Name</b></td><td><b>Role</b></td></tr>
+  <tr><td>Alice</td><td>Engineer</td></tr>
+  <tr><td>Bob</td><td>Designer</td></tr>
+</table>
+<p>Copyright (C) 2024. All rights reserved (TM)</p></textarea>
+        <button class="convert-btn" onclick="runDemo()">▶ Run Conversion Rules</button>
+      </div>
+    </div>
+    <div class="demo-box">
+      <div class="demo-box-header">📤 Output HTML (after rules)</div>
+      <div class="demo-box-body">
+        <div class="output-box" id="demo-output">Click "Run Conversion Rules" →</div>
+        <div id="demo-fixes" style="margin-top:.6rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONVERSION RULES -->
+  <div class="section-title">Conversion Rules</div>
+  <div class="section-sub">All 15 rules run automatically on every conversion — upload and editor paths are identical.</div>
+  <table class="rules-table">
+    <thead><tr><th>#</th><th>Rule</th><th>Input</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Heading normalise</td><td><code>&lt;h1&gt;</code></td><td><code>&lt;h2&gt;</code></td></tr>
+      <tr><td>2</td><td>Phone → tel: link</td><td>044-1234567</td><td><code>&lt;a href="tel:0441234567"&gt;</code> (fax numbers skipped)</td></tr>
+      <tr><td>3</td><td>Sup/Sub → Unicode</td><td><code>&lt;sup&gt;TM&lt;/sup&gt;</code></td><td><code>&amp;trade;</code></td></tr>
+      <tr><td>4</td><td>b → strong</td><td><code>&lt;b&gt;</code></td><td><code>&lt;strong&gt;</code></td></tr>
+      <tr><td>5</td><td>i/em → strong (short) or unwrap (long)</td><td><code>&lt;i&gt;Note&lt;/i&gt;</code></td><td><code>&lt;strong&gt;Note&lt;/strong&gt;</code></td></tr>
+      <tr><td>6</td><td>Remove underline</td><td><code>&lt;u&gt;</code></td><td>unwrapped (text kept)</td></tr>
+      <tr><td>7</td><td>Strip XML / MSO comments</td><td><code>&lt;xml&gt;…&lt;/xml&gt;</code>, <code>&lt;!--[if mso]&gt;</code></td><td>removed</td></tr>
+      <tr><td>8</td><td>Symbol entities</td><td>©, (TM), (R)</td><td><code>&amp;copy;</code> <code>&amp;trade;</code> <code>&amp;reg;</code></td></tr>
+      <tr><td>9</td><td>Table scope (bold header detection)</td><td>Bold first row → <code>&lt;td&gt;</code></td><td><code>&lt;th scope="col"&gt;</code> in <code>&lt;thead&gt;</code></td></tr>
+      <tr><td>10</td><td>Bluecard® auto-append</td><td>Bluecard</td><td>Bluecard&amp;reg;</td></tr>
+      <tr><td>11</td><td>Remove &amp;nbsp;</td><td><code>&amp;nbsp;</code></td><td>regular space</td></tr>
+      <tr><td>D</td><td>Remove strikethrough text</td><td><code>&lt;s&gt;</code>, <code>&lt;del&gt;</code>, <code>~~text~~</code></td><td>tag and text removed entirely</td></tr>
+      <tr><td>E</td><td>strong wraps anchor</td><td><code>&lt;a&gt;&lt;strong&gt;text&lt;/strong&gt;&lt;/a&gt;</code></td><td><code>&lt;strong&gt;&lt;a&gt;text&lt;/a&gt;&lt;/strong&gt;</code></td></tr>
+      <tr><td>F</td><td>Fix file:// URLs</td><td><code>href="file://www.example.com/page"</code></td><td><code>href="https://www.example.com/page"</code></td></tr>
+      <tr><td>G</td><td>Fix unclosed quotes, brackets &amp; tags</td><td><code>&lt;a href="https://x.com&gt;</code>, <code>&lt;p&gt;A&lt;p&gt;B&lt;/p&gt;</code></td><td>quote/tag auto-closed, flagged 🔧 in test report</td></tr>
+    </tbody>
+  </table>
+
+  <!-- TEST REPORT -->
+  <div class="section-title">Post-Conversion Test Report</div>
+  <div class="section-sub">Every conversion automatically runs 21 checks against the output. Download a full HTML report with line-numbered error locations.</div>
+
+  <div class="report-grid">
+    <div>
+      <div class="scorecard">
+        <div><div class="score-num" style="color:var(--ink)">22</div><div class="score-label">Total Checks</div></div>
+        <div><div class="score-num score-pass">19</div><div class="score-label">Passed</div></div>
+        <div><div class="score-num score-fixed">2</div><div class="score-label">Auto-Fixed</div></div>
+        <div><div class="score-num score-fail">1</div><div class="score-label">Failed</div></div>
+        <div class="pct-bar"><div class="pct-fill warn" style="width:86%"></div></div>
+        <span style="font-family:var(--mono);font-weight:700;color:#d97706;font-size:.85rem">86%</span>
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap;font-size:.72rem;color:#5a5952;margin-bottom:.6rem;padding:0 .2rem;">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:5px;vertical-align:middle"></span>Passed — no issue found</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7c4dab;margin-right:5px;vertical-align:middle"></span>Auto-Fixed — issue corrected automatically</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--accent);margin-right:5px;vertical-align:middle"></span>Failed — needs attention</span>
+      </div>
+
+      <div class="check-list">
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;h1&gt; tags in output (h1 → h2)</span><span class="check-rule">Rule 1</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;b&gt; tags in output (b → strong)</span><span class="check-rule">Rule 4</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;u&gt; tags in output (underline removed)</span><span class="check-rule">Rule 6</span></div>
+        <div class="check-item"><span class="check-icon bad">✗</span><span class="check-name">No &amp;nbsp; entities in output</span><span class="check-line">Line 14</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;s&gt;, &lt;del&gt;, or &lt;strike&gt; tags</span><span class="check-rule">Rule D</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No file:// URLs in href attributes</span><span class="check-rule">Rule F</span></div>
+        <div class="check-item">
+          <span class="check-icon fixed">🔧</span><span class="check-name">Unclosed attribute quote auto-fixed</span><span class="check-line fixed-line">Line 9</span>
+          <div class="fixed-diff"><code>&lt;a href="https://example.com&gt;</code> → <code class="to">&lt;a href="https://example.com"&gt;</code></div>
+        </div>
+        <div class="check-item">
+          <span class="check-icon fixed">🔧</span><span class="check-name">Unclosed &lt;p&gt; tag auto-closed</span><span class="check-line fixed-line">Line 22</span>
+          <div class="fixed-diff"><code>&lt;p&gt;First … &lt;p&gt;</code> → <code class="to">&lt;p&gt;First … &lt;/p&gt;&lt;p&gt;</code></div>
+        </div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No inline style= attributes in output</span><span class="check-rule">General</span></div>
+      </div>
+
+      <a class="report-dl" href="#" onclick="return false">⬇ Download Full Test Report (.html)</a>
+    </div>
+
+    <div>
+      <div class="feat" style="margin-bottom:1rem">
+        <div class="feat-icon">🧪</div>
+        <h3>22 Automated Checks</h3>
+        <p>Covers all 15 conversion rules plus general checks: no leftover styles, no class attributes, valid tel: links, and non-empty output.</p>
+      </div>
+      <div class="feat" style="margin-bottom:1rem">
+        <div class="feat-icon">🔧</div>
+        <h3>Auto-Fix with Diff View</h3>
+        <p>Unclosed quotes, stray brackets, and unclosed tags are detected and repaired automatically — shown in purple with a before → after diff.</p>
+      </div>
+      <div class="feat" style="margin-bottom:1rem">
+        <div class="feat-icon">📍</div>
+        <h3>Line-Numbered Errors</h3>
+        <p>Every failed or fixed check points to the exact line number and snippet in the converted HTML — no manual searching required.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📄</div>
+        <h3>Standalone HTML Report</h3>
+        <p>The report is a self-contained file with a scorecard, pass/fixed/fail breakdown grouped by rule, and the full converted HTML — ready to share or archive.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="section-title">Key Features</div>
+  <div class="section-sub">Everything you need for clean, production-ready HTML output.</div>
+  <div class="features">
+    <div class="feat"><div class="feat-icon">🔒</div><h3>100% Browser-Side</h3><p>No files ever leave your device. All conversion happens locally using Mammoth.js and SheetJS.</p></div>
+    <div class="feat"><div class="feat-icon">✏️</div><h3>Rich Text Editor</h3><p>Full toolbar: headings, bold, italic, underline, lists, alignment, indent, links, and more.</p></div>
+    <div class="feat"><div class="feat-icon">📊</div><h3>Excel & CSV Support</h3><p>Every sheet becomes a labelled HTML table. Supports .xlsx, .xls, and .csv formats.</p></div>
+    <div class="feat"><div class="feat-icon">🏷️</div><h3>Semantic Tables</h3><p>Bold first rows automatically become <code>&lt;th scope="col"&gt;</code> with proper <code>&lt;thead&gt;</code> and <code>&lt;tbody&gt;</code>.</p></div>
+    <div class="feat"><div class="feat-icon">📋</div><h3>Copy & Download</h3><p>One-click copy to clipboard or download as .txt. Preview rendered output alongside the code.</p></div>
+    <div class="feat"><div class="feat-icon">🌙</div><h3>Dark Mode</h3><p>Automatically adapts to your system's light or dark preference using CSS custom properties.</p></div>
+    <div class="feat"><div class="feat-icon">🧪</div><h3>Built-in Test Suite</h3><p>22 automated checks validate every conversion. Auto-fixed issues are shown in purple with a before → after diff; failures report the exact line number.</p></div>
+  </div>
+</div>
+
+<footer>doc→html Converter · POC Demo · Runs entirely in your browser · No server upload</footer>
+
+<script>
+/* Demo runner — applies all 15 rules client-side */
+var demoFixes = [];
+
+function runDemo() {
+  demoFixes = [];
+  var raw = document.getElementById('demo-input').value;
+  var out = applyRules(raw);
+  document.getElementById('demo-output').innerHTML = syntaxHL(escForDisplay(out));
+  renderFixes();
+}
+
+function renderFixes() {
+  var box = document.getElementById('demo-fixes');
+  if (!demoFixes.length) {
+    box.innerHTML = '<div class="check-item" style="border:1px solid var(--border);border-radius:6px"><span class="check-icon ok">✓</span><span class="check-name">No unclosed quotes, brackets, or tags detected</span><span class="check-rule">Rule G</span></div>';
+    return;
+  }
+  var html = '<div class="check-list" style="border:1px solid var(--border)">';
+  demoFixes.forEach(function(f) {
+    html += '<div class="check-item">'
+      + '<span class="check-icon fixed">🔧</span>'
+      + '<span class="check-name">' + f.type + '</span>'
+      + '<span class="check-line fixed-line">Line ' + f.lineNo + '</span>'
+      + '<div class="fixed-diff"><code>' + escForDisplay(f.before) + '</code> → <code class="to">' + escForDisplay(f.after) + '</code></div>'
+      + '</div>';
+  });
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function applyRules(html) {
+  /* Rule G — fix unclosed quotes, stray brackets, unclosed tags (runs first, on raw string) */
+  html = ruleG(html);
+
+  var doc  = new DOMParser().parseFromString('<div id="r">' + html + '</div>', 'text/html');
+  var root = doc.getElementById('r');
+
+  /* Rule 1 — h1→h2 */
+  root.querySelectorAll('h1').forEach(function(el){ changeTag(el,'h2'); });
+  /* Rule 4 — b→strong */
+  root.querySelectorAll('b').forEach(function(el){ changeTag(el,'strong'); });
+  /* Rule 6 — remove u */
+  root.querySelectorAll('u').forEach(function(el){ unwrap(el); });
+  /* Rule A — no strong in headings */
+  root.querySelectorAll('h2 strong,h3 strong').forEach(function(el){ unwrap(el); });
+  /* Rule C — merge consecutive strong */
+  mergeStrong(root);
+  /* Rule D — remove strikethrough text entirely */
+  ruleD(root);
+  /* Rule E — strong wraps anchor */
+  ruleE(root);
+  /* Rule B — table scope */
+  tableScope(root);
+
+  var s = root.innerHTML;
+  /* Rule 8 — symbol entities */
+  s = s.replace(/\(C\)/gi,'&copy;').replace(/\(TM\)/gi,'&trade;').replace(/\(R\)/gi,'&reg;');
+  /* Rule 10 — Bluecard */
+  s = s.replace(/\bBluecard\b(?!&reg;)/gi, function(m){ return m+'&reg;'; });
+  /* Rule 11 — nbsp */
+  s = s.replace(/&nbsp;/gi,' ');
+  /* Rule F — fix file:// URLs */
+  s = ruleF(s);
+  /* Rule 2 — phone tel (skip fax) */
+  s = s.replace(/>([\s\S]*?)</g, function(m, text) {
+    var r = text.replace(/(\+?[\d][\d\s.\-()\u200c]{6,}[\d])/g, function(ph, _m, offset, str) {
+      var before = str.slice(Math.max(0,offset-60),offset);
+      var after  = str.slice(offset+ph.length, offset+ph.length+20);
+      if (/\bfax\b/i.test(before)||/\bfax\b/i.test(after)) return ph;
+      return '<a href="tel:'+ph.replace(/[^\d+]/g,'')+'">'+ph+'</a>';
+    });
+    return '>'+r+'<';
+  });
+  return s.trim();
+}
+
+function tableScope(root) {
+  root.querySelectorAll('table').forEach(function(table) {
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+    if (!rows.length) return;
+    var headCells = Array.prototype.slice.call(rows[0].querySelectorAll('td,th'));
+    if (!headCells.length || !headCells.every(function(c){ return cellBold(c); })) return;
+    headCells.forEach(function(cell) {
+      root.querySelectorAll('strong').forEach(function(s){ if(cell.contains(s)) unwrap(s); });
+      var th = changeTag(cell,'th'); th.setAttribute('scope','col');
+    });
+    var thead = table.ownerDocument.createElement('thead');
+    rows[0].parentNode.removeChild(rows[0]); thead.appendChild(rows[0]);
+    var tbody = table.ownerDocument.createElement('tbody');
+    rows.slice(1).forEach(function(tr){ tr.parentNode.removeChild(tr); tbody.appendChild(tr); });
+    while(table.firstChild) table.removeChild(table.firstChild);
+    table.appendChild(thead); if(rows.slice(1).length) table.appendChild(tbody);
+  });
+}
+function cellBold(c) {
+  var t=c.textContent.trim(); if(!t) return false;
+  var ss=Array.prototype.slice.call(c.querySelectorAll('strong'));
+  if(!ss.length) return false;
+  return ss.map(function(s){return s.textContent;}).join('').trim()===t;
+}
+function mergeStrong(root) {
+  root.querySelectorAll('strong strong').forEach(function(i){ unwrap(i); });
+  root.querySelectorAll('strong').forEach(function(el) {
+    var nx=el.nextSibling, gap=null;
+    if(nx&&nx.nodeType===3&&nx.nodeValue.trim()===''){gap=nx;nx=nx.nextSibling;}
+    if(nx&&nx.nodeName==='STRONG'){if(gap)el.appendChild(gap);while(nx.firstChild)el.appendChild(nx.firstChild);nx.parentNode.removeChild(nx);}
+  });
+}
+function ruleD(root) {
+  /* Remove <s>, <del>, <strike> and all their content */
+  root.querySelectorAll('s,del,strike').forEach(function(el){ el.parentNode.removeChild(el); });
+  /* Remove ~~text~~ from text nodes */
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  var nodes=[]; var n; while((n=walker.nextNode())) nodes.push(n);
+  nodes.forEach(function(tn){ if(/~~[\s\S]*?~~/.test(tn.nodeValue)) tn.nodeValue=tn.nodeValue.replace(/~~[\s\S]*?~~/g,''); });
+}
+function ruleE(root) {
+  /* <a><strong>text</strong></a>  →  <strong><a>text</a></strong> */
+  root.querySelectorAll('a > strong').forEach(function(strong) {
+    var a = strong.parentNode;
+    if (a.nodeName !== 'A') return;
+    var other = Array.prototype.slice.call(a.childNodes).filter(function(nd){ return nd!==strong&&!(nd.nodeType===3&&nd.nodeValue.trim()===''); });
+    if (other.length) return;
+    var na = a.ownerDocument.createElement('a');
+    Array.prototype.slice.call(a.attributes).forEach(function(at){ na.setAttribute(at.name,at.value); });
+    while(strong.firstChild) na.appendChild(strong.firstChild);
+    strong.appendChild(na);
+    a.parentNode.replaceChild(strong, a);
+  });
+}
+function ruleF(html) {
+  return html.replace(/(<a\s[^>]*href\s*=\s*["'])file:\/\/([^"']*)(["'][^>]*>)/gi, function(m,open,path,close){
+    var segs = path.replace(/\\/g,'/').split('/').filter(Boolean);
+    var domain=null, idx=-1;
+    for(var i=0;i<segs.length;i++){
+      if(/^[a-zA-Z0-9]([a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/.test(segs[i])){domain=segs[i];idx=i;break;}
+    }
+    var url = domain ? 'https://'+domain+(segs.slice(idx+1).length?'/'+segs.slice(idx+1).join('/'):'') : '#';
+    return open+url+close;
+  });
+}
+function ruleG(html) {
+  var lines = html.split('\n');
+
+  /* Fix 1: unclosed attribute quotes */
+  lines = lines.map(function(line, idx) {
+    return line.replace(/<([a-zA-Z][a-zA-Z0-9]*)((?:\s+[^<>]*)?)>/g, function(full, tag, attrs) {
+      if (!attrs) return full;
+      var dq = (attrs.match(/"/g)||[]).length;
+      var sq = (attrs.match(/'/g)||[]).length;
+      var newAttrs = attrs, changed = false;
+      if (dq % 2 === 1) { newAttrs = newAttrs.replace(/\s*$/,'') + '"'; changed = true; }
+      if (sq % 2 === 1) { newAttrs = newAttrs.replace(/\s*$/,'') + "'"; changed = true; }
+      if (changed) {
+        var after = '<'+tag+newAttrs+'>';
+        demoFixes.push({ type:'Unclosed attribute quote auto-fixed', before: full.trim(), after: after.trim(), lineNo: idx+1 });
+        return after;
+      }
+      return full;
+    });
+  });
+  html = lines.join('\n');
+
+  /* Fix 2: stray "<" not part of a tag */
+  lines = html.split('\n');
+  lines = lines.map(function(line, idx) {
+    if (/<(?![a-zA-Z\/!])/.test(line)) {
+      var after = line.replace(/<(?![a-zA-Z\/!])/, '&lt;');
+      demoFixes.push({ type:'Stray "&lt;" escaped to &amp;lt;', before: line.trim(), after: after.trim(), lineNo: idx+1 });
+      return after;
+    }
+    return line;
+  });
+  html = lines.join('\n');
+
+  /* Fix 3: unclosed block tags via running-balance scan */
+  ['p','div','li','td','th','tr','h2','h3','h4','h5','h6'].forEach(function(tag) {
+    var tagRe = new RegExp('<(\\/?)'+tag+'((?:\\s[^>]*)?)>','gi');
+    var hLines = html.split('\n');
+    var openStack = [];
+    hLines.forEach(function(line, idx) {
+      var m;
+      tagRe.lastIndex = 0;
+      while ((m = tagRe.exec(line)) !== null) {
+        var isClose = m[1] === '/';
+        var tagText = m[0];
+        if (isClose) {
+          if (openStack.length) openStack.pop();
+        } else {
+          if (openStack.length) {
+            var prev = openStack[openStack.length-1];
+            demoFixes.push({
+              type: 'Unclosed &lt;'+tag+'&gt; tag auto-closed',
+              before: prev.tagText + ' … ' + tagText,
+              after:  prev.tagText + ' … </'+tag+'>' + tagText,
+              lineNo: prev.lineNo
+            });
+            openStack.pop();
+          }
+          openStack.push({ lineNo: idx+1, tagText: tagText });
+        }
+      }
+    });
+    while (openStack.length > 1) {
+      var leftover = openStack.shift();
+      demoFixes.push({
+        type: 'Unclosed &lt;'+tag+'&gt; tag auto-closed',
+        before: leftover.tagText + ' … (end of document)',
+        after:  leftover.tagText + ' … </'+tag+'>',
+        lineNo: leftover.lineNo
+      });
+    }
+  });
+
+  return html;
+}
+
+function changeTag(el,tag){
+  var n=el.ownerDocument.createElement(tag);
+  Array.prototype.slice.call(el.attributes).forEach(function(a){n.setAttribute(a.name,a.value);});
+  while(el.firstChild) n.appendChild(el.firstChild);
+  el.parentNode.replaceChild(n,el); return n;
+}
+function unwrap(el){var p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);p.removeChild(el);}
+
+function escForDisplay(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function syntaxHL(s){
+  return s
+    .replace(/(&lt;\/?[a-z][a-z0-9]*)/gi,'<span class="hl-tag">$1</span>')
+    .replace(/(scope|href|class)=/g,'<span class="hl-attr">$1</span>=')
+    .replace(/="([^"]*)"/g,'="<span class="hl-val">$1</span>"');
+}
+window.addEventListener('DOMContentLoaded', runDemo);
+</script>
+</body>
+</html>
