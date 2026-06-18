@@ -808,72 +808,9 @@
     else showStatus(uploadStatus, 'Unsupported file. Please use .docx, .xlsx, .xls, or .csv.', 'err');
   }
 
-  /* DOCX via Mammoth */
-  function processDocx(file) {
-    state.baseName = file.name.replace(/\.docx$/i, '');
-    showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
-    resultPanel.classList.add('hidden');
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      mammoth.convertToHtml({ arrayBuffer: e.target.result })
-        .then(function (result) {
-          var transformed = transformHtml(result.value);
-          var indented    = indentHtml(transformed);
-          state.htmlSource      = indented;
-          fileLabel.textContent = file.name;
-          previewPane.innerHTML = transformed;
-          codePane.textContent  = indented;
-          activateTab('preview');
-          resultPanel.classList.remove('hidden');
-          showStatus(uploadStatus, 'Converted successfully.', 'ok');
-        })
-        .catch(function (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); });
-    };
-    reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
-    reader.readAsArrayBuffer(file);
-  }
-
   /* Excel / CSV via SheetJS */
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function processExcel(file) {
-    state.baseName = file.name.replace(/\.[^.]+$/, '');
-    showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
-    resultPanel.classList.add('hidden');
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      try {
-        var wb  = XLSX.read(e.target.result, { type: 'array' });
-        var html = '';
-        wb.SheetNames.forEach(function (sName) {
-          var rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], { header:1, defval:'' });
-          var ne   = rows.filter(function (r) { return r.some(function (c) { return c !== '' && c != null; }); });
-          if (!ne.length) return;
-          var maxC = 0;
-          ne.forEach(function (r) { if (r.length > maxC) maxC = r.length; });
-          html += '<h2>' + escHtml(sName) + '</h2>\n<table>\n  <tbody>\n';
-          ne.forEach(function (row) {
-            html += '    <tr>\n';
-            for (var c = 0; c < maxC; c++)
-              html += '      <td>' + escHtml(row[c] !== undefined ? row[c] : '') + '</td>\n';
-            html += '    </tr>\n';
-          });
-          html += '  </tbody>\n</table>\n\n';
-        });
-        html = html.trim();
-        state.htmlSource      = html;
-        fileLabel.textContent = file.name;
-        previewPane.innerHTML = html;
-        codePane.textContent  = html;
-        activateTab('preview');
-        resultPanel.classList.remove('hidden');
-        showStatus(uploadStatus, 'Converted successfully.', 'ok');
-      } catch (err) { showStatus(uploadStatus, 'Conversion failed: ' + (err.message || err), 'err'); }
-    };
-    reader.onerror = function () { showStatus(uploadStatus, 'Could not read the file.', 'err'); };
-    reader.readAsArrayBuffer(file);
   }
 
   /* ══ UI helpers ═══════════════════════════════════════════════ */
@@ -1174,8 +1111,6 @@
 
 
   /* ── Wire runPostConversionTests into both conversion paths ── */
-  /* Patch processDocx success handler */
-  var _origProcessDocx = processDocx;
   function processDocx(file) {
     state.baseName = file.name.replace(/\.docx$/i, '');
     showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
@@ -1201,8 +1136,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  /* Patch processExcel success handler */
-  var _origProcessExcel = processExcel;
   function processExcel(file) {
     state.baseName = file.name.replace(/\.[^.]+$/, '');
     showStatus(uploadStatus, 'Converting \u201C' + file.name + '\u201D\u2026', 'ok');
@@ -1242,8 +1175,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  /* Patch editor convert handler — add test run after existing logic */
-  var origEditorClick = editorConvertBtn.onclick;
   editorConvertBtn.addEventListener('click', function () {
     /* Tests run after state.htmlSource is set — use a tiny delay to let
        the existing handler finish updating the DOM first */
