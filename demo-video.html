@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>doc→html · Demo Video</title>
+<style>
+:root{
+  --ink:#1a1a18; --paper:#f7f6f3; --surface:#fff;
+  --border:#e2e0d8; --green:#2d6a4f; --green-bg:#edf7f0;
+  --blue:#2b579a; --blue-bg:#eef3fb;
+  --purple:#6b3fa0; --purple-bg:#f3eefb;
+  --accent:#c84b31; --mono:'Menlo','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:system-ui,-apple-system,sans-serif;
+  background:#0d0d0c;color:#f0efe9;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;gap:12px;
+}
+
+.player{
+  width:100%;max-width:960px;aspect-ratio:16/9;background:var(--ink);
+  border-radius:14px;overflow:hidden;position:relative;
+  box-shadow:0 30px 80px rgba(0,0,0,.65);display:flex;flex-direction:column;
+}
+.screen{flex:1;position:relative;overflow:hidden;background:var(--paper);color:var(--ink);}
+
+/* ── Slides ─────────────────────────────────────── */
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+  padding:5% 7%;opacity:0;transform:translateY(14px) scale(.99);
+  transition:opacity .55s ease,transform .55s ease;pointer-events:none;
+}
+.slide.active{opacity:1;transform:none;pointer-events:auto;}
+
+.eyebrow{
+  font-family:var(--mono);font-size:clamp(9px,.78vw,13px);
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--green);
+  font-weight:700;margin-bottom:.6em;
+}
+h1.slide-title{font-size:clamp(18px,3vw,36px);font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:.7em;}
+h1.slide-title em{color:var(--green);font-style:normal;}
+p.lead{font-size:clamp(12px,1.25vw,17px);color:#5a5952;line-height:1.55;max-width:680px;}
+code{font-family:var(--mono);background:#eceae4;padding:1px 5px;border-radius:3px;font-size:.92em;}
+
+/* ── Title slide (s0) ───────────────────────────── */
+#s0{background:var(--ink);color:#f0efe9;align-items:center;text-align:center;}
+#s0 .brand{font-family:var(--mono);font-weight:800;font-size:clamp(14px,1.5vw,22px);margin-bottom:1em;letter-spacing:-.5px;}
+#s0 .brand em{color:#6fcf97;font-style:normal;}
+#s0 h1{font-size:clamp(22px,3.8vw,48px);}
+#s0 p.lead{margin:0 auto;color:rgba(240,239,233,.65);}
+#s0 .chips{display:flex;gap:.5em;justify-content:center;margin-top:1.4em;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:.35em .9em;border-radius:20px;
+  font-size:clamp(9px,.95vw,13px);font-weight:600;font-family:var(--mono);border:1px solid;}
+.chip-w{background:var(--blue-bg);color:var(--blue);border-color:var(--blue);}
+.chip-x{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.chip-e{background:var(--purple-bg);color:var(--purple);border-color:var(--purple);}
+
+/* ── Steps (s1) ─────────────────────────────────── */
+.steps-grid{display:grid;grid-template-columns:1fr 1fr;gap:1em;margin-top:1em;}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1em 1.1em;}
+.step-num{width:1.8em;height:1.8em;min-width:22px;min-height:22px;background:var(--ink);color:#fff;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(9px,.85vw,13px);font-weight:700;margin-bottom:.5em;}
+.step h3{font-size:clamp(11px,1.1vw,15px);margin-bottom:.25em;}
+.step p{font-size:clamp(9px,.92vw,13px);color:#5a5952;line-height:1.4;}
+
+/* ── Sample (s2) ─────────────────────────────────── */
+.sample-grid{display:grid;grid-template-columns:1fr 1fr;gap:1em;margin-top:1em;}
+.sample-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.sample-box-header{background:#eeece5;border-bottom:1px solid var(--border);
+  padding:.4em .9em;font-size:clamp(9px,.82vw,12px);font-weight:600;text-transform:uppercase;color:#5a5952;}
+.doc-preview{padding:.9em 1em;font-size:clamp(9px,.95vw,13px);line-height:1.6;}
+.doc-h1{font-size:clamp(11px,1.2vw,16px);font-weight:800;border-bottom:1px solid var(--border);padding-bottom:.25em;margin-bottom:.5em;}
+.doc-preview table{width:100%;border-collapse:collapse;font-size:.9em;margin-top:.5em;}
+.doc-preview td{border:1px solid var(--border);padding:.25em .5em;}
+.doc-preview td:first-child{font-weight:700;}
+.code-preview{padding:.9em 1em;font-family:var(--mono);font-size:clamp(8px,.84vw,12px);
+  line-height:1.65;background:#1a1a18;color:#a8d5a2;white-space:pre;}
+.hl-tag{color:#f08d49;} .hl-attr{color:#9cdcfe;} .hl-val{color:#ce9178;} .hl-text{color:#d4d0c8;}
+.hl-dim{color:#6a9955;font-style:italic;}
+
+/* ── Rules table (s3a / s3b) ─────────────────────── */
+.rules-table{width:100%;border-collapse:collapse;font-size:clamp(8px,.9vw,12px);margin-top:.8em;}
+.rules-table th{background:var(--ink);color:#f0efe9;padding:.4em .7em;text-align:left;}
+.rules-table td{padding:.38em .7em;border-bottom:1px solid var(--border);vertical-align:top;}
+.rules-table tr:nth-child(even) td{background:#faf9f6;}
+.badge{display:inline-block;font-family:var(--mono);font-weight:700;font-size:.85em;
+  padding:1px 6px;border-radius:4px;background:var(--ink);color:#f0efe9;}
+
+/* ── Test report (s4) ────────────────────────────── */
+.scorecard{display:flex;gap:1.6em;align-items:center;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;padding:1em 1.2em;margin-top:1em;}
+.score-num{font-size:clamp(20px,2.4vw,36px);font-weight:800;font-family:var(--mono);}
+.score-label{font-size:clamp(8px,.8vw,11px);color:#5a5952;text-transform:uppercase;margin-top:.1em;}
+.score-pass{color:var(--green);}
+.score-pct{font-family:var(--mono);font-weight:800;font-size:clamp(16px,2vw,28px);color:var(--green);}
+.pct-bar{flex:1;height:8px;background:#e2e0d8;border-radius:4px;overflow:hidden;}
+.pct-fill{height:100%;background:var(--green);width:100%;border-radius:4px;}
+.checks-mini{display:grid;grid-template-columns:1fr 1fr;gap:.3em 1.2em;margin-top:1em;
+  font-size:clamp(9px,.93vw,13px);}
+.checks-mini div{display:flex;gap:.4em;align-items:baseline;}
+.ok{color:var(--green);font-weight:700;}
+.dl-note{margin-top:.9em;font-size:clamp(8px,.82vw,12px);color:#888;
+  background:#faf9f6;border:1px solid var(--border);border-radius:8px;padding:.5em .9em;}
+
+/* ── Standalone tests (s5) ───────────────────────── */
+.cards-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin-top:1em;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1em 1.1em;}
+.card-icon{font-size:clamp(16px,1.8vw,26px);margin-bottom:.4em;}
+.card h3{font-size:clamp(10px,1vw,14px);margin-bottom:.3em;}
+.card p{font-size:clamp(8px,.88vw,12px);color:#5a5952;line-height:1.4;}
+.url-badge{display:inline-block;font-family:var(--mono);background:#1a1a18;color:#6fcf97;
+  padding:.3em .8em;border-radius:6px;font-size:clamp(8px,.85vw,12px);margin-top:.7em;}
+
+/* ── Key features (s6) ───────────────────────────── */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:.9em;margin-top:1em;}
+.feat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9em 1em;}
+.feat-icon{font-size:clamp(14px,1.5vw,22px);margin-bottom:.4em;}
+.feat h3{font-size:clamp(10px,1vw,14px);margin-bottom:.25em;}
+.feat p{font-size:clamp(8px,.85vw,12px);color:#5a5952;line-height:1.35;}
+
+/* ── Outro (s7) ──────────────────────────────────── */
+#s7{background:var(--ink);color:#f0efe9;align-items:center;text-align:center;}
+#s7 .brand{font-family:var(--mono);font-weight:800;font-size:clamp(14px,1.5vw,22px);margin-bottom:.7em;}
+#s7 .brand em{color:#6fcf97;font-style:normal;}
+#s7 h1{font-size:clamp(20px,3.2vw,44px);}
+#s7 p.lead{margin:.6em auto 0;color:rgba(240,239,233,.6);}
+.tagline{margin-top:1.6em;font-family:var(--mono);font-size:clamp(11px,1.1vw,15px);
+  color:#6fcf97;display:flex;gap:1.6em;justify-content:center;flex-wrap:wrap;}
+.tagline span::before{content:'· ';}
+
+/* ── Controls bar ────────────────────────────────── */
+.controls{
+  background:#111110;padding:10px 16px;display:flex;align-items:center;gap:12px;
+  border-top:1px solid #222;flex-shrink:0;
+}
+.btn{
+  background:#6fcf97;color:#0d0d0c;border:none;width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;
+  flex-shrink:0;transition:transform .15s,opacity .15s;
+}
+.btn:hover{transform:scale(1.1);}
+.btn:disabled{opacity:.35;cursor:default;transform:none;}
+.btn.sec{background:transparent;color:#f0efe9;border:1px solid #444;
+  width:30px;height:30px;font-size:12px;}
+.progress-wrap{flex:1;display:flex;flex-direction:column;gap:5px;}
+.progress-track{height:4px;background:#2a2a27;border-radius:2px;overflow:hidden;cursor:pointer;position:relative;}
+.progress-fill{height:100%;background:#6fcf97;width:0%;transition:width .2s linear;border-radius:2px;}
+.meta-row{display:flex;justify-content:space-between;align-items:center;}
+.slide-label{font-size:10px;color:#666;font-family:var(--mono);}
+.caption{font-size:11px;color:#888;max-width:400px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.timecode{font-family:var(--mono);font-size:10px;color:#555;flex-shrink:0;}
+
+/* ── Start overlay ───────────────────────────────── */
+.start-overlay{
+  position:absolute;inset:0;background:rgba(10,10,9,.9);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  z-index:20;cursor:pointer;
+}
+.play-big{
+  width:72px;height:72px;border-radius:50%;background:#6fcf97;
+  display:flex;align-items:center;justify-content:center;font-size:26px;color:#0d0d0c;
+  transition:transform .15s;
+}
+.start-overlay:hover .play-big{transform:scale(1.1);}
+.start-overlay .hint{color:#aaa;font-size:12px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;}
+
+/* ── Dot nav ─────────────────────────────────────── */
+.dots{display:flex;gap:6px;justify-content:center;}
+.dot{width:7px;height:7px;border-radius:50%;background:#333;cursor:pointer;transition:background .2s,transform .2s;}
+.dot.active{background:#6fcf97;transform:scale(1.25);}
+
+/* ── Responsive ──────────────────────────────────── */
+@media(max-width:640px){
+  .steps-grid,.sample-grid,.features,.cards-row{grid-template-columns:1fr;}
+  .caption{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="player">
+  <div class="screen" id="screen">
+
+    <div class="start-overlay" id="startOverlay">
+      <div class="play-big">&#9654;</div>
+      <span class="hint">Click to play with narration</span>
+    </div>
+
+    <!-- s0: Title -->
+    <div class="slide active" id="s0">
+      <div class="brand">doc<em>&#8594;</em>html</div>
+      <h1 class="slide-title">Convert Documents to<br><em>Clean Semantic HTML5</em></h1>
+      <p class="lead">Upload Word or Excel files, paste plain text, or use the built-in editor — get perfectly structured, style-free HTML every time. Nothing leaves your browser.</p>
+      <div class="chips">
+        <span class="chip chip-w">&#128196; .docx Word</span>
+        <span class="chip chip-x">&#128202; .xlsx / .xls / .csv</span>
+        <span class="chip chip-e">&#9999;&#65039; Text Editor</span>
+      </div>
+    </div>
+
+    <!-- s1: How It Works -->
+    <div class="slide" id="s1">
+      <div class="eyebrow">How it works</div>
+      <h1 class="slide-title" style="font-size:clamp(16px,2.5vw,30px)">Four steps, entirely in your browser</h1>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Upload your file</h3>
+          <p>Drag and drop a .docx, .xlsx, .xls, or .csv — or paste text into the rich text editor. Nothing leaves your machine.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Extract content</h3>
+          <p>Mammoth.js parses Word XML; SheetJS parses spreadsheet rows and columns into structured data.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Run 15 rules</h3>
+          <p>The conversion pipeline normalises headings, phone links, tables, symbols, bold, underline, and more — in sequence.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h3>Copy or download</h3>
+          <p>Preview the result, copy the HTML to clipboard, or download as a .txt file ready for your CMS.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- s2: Sample Conversion -->
+    <div class="slide" id="s2">
+      <div class="eyebrow">Sample conversion</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">A document goes in — clean HTML comes out</h1>
+      <div class="sample-grid">
+        <div class="sample-box">
+          <div class="sample-box-header">&#128196; Source document (Word-style)</div>
+          <div class="doc-preview">
+            <div class="doc-h1">Company Overview</div>
+            <p><strong>Contact us</strong> at <strong>044-1234 567</strong></p>
+            <p>BlueCard&#174; plan includes <u>all benefits</u>&#8482;</p>
+            <table>
+              <tr><td><strong>Product</strong></td><td><strong>Price</strong></td></tr>
+              <tr><td>Basic</td><td>$99</td></tr>
+              <tr><td>Pro</td><td>$199</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="sample-box">
+          <div class="sample-box-header">&#9989; Output HTML</div>
+          <div class="code-preview"><span class="hl-tag">&lt;h2&gt;</span><span class="hl-text">Company Overview</span><span class="hl-tag">&lt;/h2&gt;</span>
+<span class="hl-tag">&lt;p&gt;&lt;strong&gt;</span>Contact us<span class="hl-tag">&lt;/strong&gt;</span> at
+  <span class="hl-tag">&lt;a href=</span><span class="hl-val">"tel:0441234567"</span><span class="hl-tag">&gt;</span>044-1234 567<span class="hl-tag">&lt;/a&gt;&lt;/p&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>BlueCard<span class="hl-tag">&amp;reg;</span> plan includes all benefits<span class="hl-tag">&amp;trade;&lt;/p&gt;</span>
+<span class="hl-tag">&lt;table&gt;&lt;thead&gt;&lt;tr&gt;</span>
+  <span class="hl-tag">&lt;th scope=</span><span class="hl-val">"col"</span><span class="hl-tag">&gt;</span>Product<span class="hl-tag">&lt;/th&gt;</span>
+  <span class="hl-tag">&lt;th scope=</span><span class="hl-val">"col"</span><span class="hl-tag">&gt;</span>Price<span class="hl-tag">&lt;/th&gt;</span>
+<span class="hl-tag">&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;</span>...<span class="hl-tag">&lt;/tbody&gt;&lt;/table&gt;</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- s3a: Rules 1-8 -->
+    <div class="slide" id="s3a">
+      <div class="eyebrow">Conversion rules &mdash; part 1 of 2</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">Rules 1–8: structure, links &amp; semantics</h1>
+      <table class="rules-table">
+        <thead><tr><th>#</th><th>Rule</th><th>Input</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge">1</span></td><td>Heading normalise</td><td><code>&lt;h1&gt;</code></td><td><code>&lt;h2&gt;</code></td></tr>
+          <tr><td><span class="badge">2</span></td><td>Phone &#8594; tel: link</td><td>044-1234567</td><td><code>&lt;a href="tel:…"&gt;</code></td></tr>
+          <tr><td><span class="badge">3</span></td><td>Sup/Sub &#8594; Unicode</td><td><code>x&lt;sup&gt;2&lt;/sup&gt;</code></td><td>x&sup2; &nbsp; H&#8322;O</td></tr>
+          <tr><td><span class="badge">4</span></td><td>b &#8594; strong</td><td><code>&lt;b&gt;</code></td><td><code>&lt;strong&gt;</code></td></tr>
+          <tr><td><span class="badge">5</span></td><td>Italic handling</td><td>short <code>&lt;i&gt;</code> / long <code>&lt;em&gt;</code></td><td>&#8594; <code>&lt;strong&gt;</code> / unwrap</td></tr>
+          <tr><td><span class="badge">6</span></td><td>Remove underline</td><td><code>&lt;u&gt;text&lt;/u&gt;</code></td><td>text (tag stripped)</td></tr>
+          <tr><td><span class="badge">7</span></td><td>Strip MSO comments</td><td>XML / Office markup</td><td>removed</td></tr>
+          <tr><td><span class="badge">8</span></td><td>Symbol entities</td><td>&#169;, (TM), (R)</td><td><code>&amp;copy; &amp;trade; &amp;reg;</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- s3b: Rules 9-F, A, C -->
+    <div class="slide" id="s3b">
+      <div class="eyebrow">Conversion rules &mdash; part 2 of 2</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">Rules 9–C: tables, cleanup &amp; structure fixes</h1>
+      <table class="rules-table">
+        <thead><tr><th>#</th><th>Rule</th><th>Input</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge">9</span></td><td>Table scope detection</td><td>Bold first row</td><td><code>&lt;th scope="col"&gt;</code></td></tr>
+          <tr><td><span class="badge">10</span></td><td>Bluecard® auto-append</td><td>Bluecard (no mark)</td><td>Bluecard&#174;</td></tr>
+          <tr><td><span class="badge">11</span></td><td>Remove &amp;nbsp;</td><td><code>&amp;nbsp;</code></td><td>regular space</td></tr>
+          <tr><td><span class="badge">D</span></td><td>Remove strikethrough</td><td><code>&lt;s&gt;</code>, <code>&lt;del&gt;</code>, <code>~~text~~</code></td><td>deleted</td></tr>
+          <tr><td><span class="badge">E</span></td><td>strong wraps anchor</td><td><code>&lt;a&gt;&lt;strong&gt;…</code></td><td><code>&lt;strong&gt;&lt;a&gt;…</code></td></tr>
+          <tr><td><span class="badge">F</span></td><td>Fix file:// URLs</td><td><code>file:///path</code></td><td><code>https://</code></td></tr>
+          <tr><td><span class="badge">A</span></td><td>No strong in headings</td><td><code>&lt;h2&gt;&lt;strong&gt;…</code></td><td>strong unwrapped</td></tr>
+          <tr><td><span class="badge">C</span></td><td>Merge consecutive bold</td><td><code>&lt;/strong&gt;&lt;strong&gt;</code></td><td>merged into one</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- s4: Test Report -->
+    <div class="slide" id="s4">
+      <div class="eyebrow">Post-conversion test report</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">Every conversion runs 47 automated checks</h1>
+      <div class="scorecard">
+        <div><div class="score-num">47</div><div class="score-label">Total</div></div>
+        <div><div class="score-num score-pass">47</div><div class="score-label">Passed</div></div>
+        <div><div class="score-num" style="color:#c84b31">0</div><div class="score-label">Failed</div></div>
+        <div class="pct-bar"><div class="pct-fill"></div></div>
+        <span class="score-pct">100%</span>
+      </div>
+      <div class="checks-mini">
+        <div><span class="ok">&#10003;</span> &lt;h1&gt; normalised to &lt;h2&gt;</div>
+        <div><span class="ok">&#10003;</span> Phone numbers wrapped in tel: links</div>
+        <div><span class="ok">&#10003;</span> Sup/sub converted to Unicode</div>
+        <div><span class="ok">&#10003;</span> Symbol entities: &amp;copy; &amp;trade; &amp;reg;</div>
+        <div><span class="ok">&#10003;</span> Table thead + th scope=col</div>
+        <div><span class="ok">&#10003;</span> Strikethrough text removed</div>
+        <div><span class="ok">&#10003;</span> No inline style= attributes in output</div>
+        <div><span class="ok">&#10003;</span> Bluecard® auto-appended</div>
+      </div>
+      <div class="dl-note">&#128196; Download the full HTML report — shows input, expected, and actual for every check.</div>
+    </div>
+
+    <!-- s5: Standalone Test Suite -->
+    <div class="slide" id="s5">
+      <div class="eyebrow">Standalone test suite</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">tests.html — open in any browser, no server needed</h1>
+      <div class="cards-row">
+        <div class="card">
+          <div class="card-icon">&#9654;&#65039;</div>
+          <h3>Auto-runs on load</h3>
+          <p>All 47 tests across 16 groups execute automatically the moment the page opens. No build step, no install.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#128269;</div>
+          <h3>Expandable test cards</h3>
+          <p>Click any group to inspect each assertion: the input HTML, the expected result, and the actual output side by side.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#128196;</div>
+          <h3>Download report</h3>
+          <p>Export the full test report as a .txt file — attach it to a pull request or share with stakeholders.</p>
+        </div>
+      </div>
+      <div class="url-badge">tests.html &nbsp;·&nbsp; 16 groups &nbsp;·&nbsp; 47 tests &nbsp;·&nbsp; 100%</div>
+    </div>
+
+    <!-- s6: Key Features -->
+    <div class="slide" id="s6">
+      <div class="eyebrow">Key features</div>
+      <h1 class="slide-title" style="font-size:clamp(14px,2.3vw,28px)">Everything you need for production-ready HTML</h1>
+      <div class="features">
+        <div class="feat"><div class="feat-icon">&#128274;</div><h3>100% browser-side</h3><p>No files ever leave your device. No server, no upload, no data retention risk.</p></div>
+        <div class="feat"><div class="feat-icon">&#128202;</div><h3>Multi-format support</h3><p>.docx, .xlsx, .xls, .csv, and direct paste — all handled in one tool.</p></div>
+        <div class="feat"><div class="feat-icon">&#127991;&#65039;</div><h3>Semantic HTML5</h3><p>Correct tags for everything: headings, tables, links, emphasis. Screen-reader ready.</p></div>
+        <div class="feat"><div class="feat-icon">&#129514;</div><h3>47 automated tests</h3><p>Full test coverage across all 15 rules, built into the app and a standalone page.</p></div>
+        <div class="feat"><div class="feat-icon">&#128203;</div><h3>Copy &amp; download</h3><p>One click to clipboard or .txt. Paste directly into any CMS, email builder, or editor.</p></div>
+        <div class="feat"><div class="feat-icon">&#9999;&#65039;</div><h3>Rich text editor</h3><p>Full toolbar: headings, bold, italic, lists, alignment, links, HR, and more.</p></div>
+      </div>
+    </div>
+
+    <!-- s7: Outro -->
+    <div class="slide" id="s7">
+      <div class="brand">doc<em>&#8594;</em>html</div>
+      <h1 class="slide-title">Clean output, every time</h1>
+      <p class="lead">15 production rules. 47 automated tests. No server. No upload.</p>
+      <div class="tagline">
+        <span>Semantic HTML5</span>
+        <span>Browser-only</span>
+        <span>Drop a file, get HTML</span>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+
+  <div class="controls">
+    <button class="btn sec" id="prevBtn" title="Previous">&#9664;</button>
+    <button class="btn" id="playBtn" title="Play / Pause">&#9654;</button>
+    <button class="btn sec" id="nextBtn" title="Next">&#9654;</button>
+    <button class="btn sec" id="restartBtn" title="Restart" style="font-size:14px">&#8635;</button>
+    <div class="progress-wrap">
+      <div class="progress-track" id="progressTrack">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="meta-row">
+        <span class="slide-label" id="slideLabel">SLIDE 1 / 8</span>
+        <span class="caption" id="captionLabel"></span>
+        <span class="timecode" id="timecode">0:00</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dots" id="dots"></div>
+
+<script>
+const SLIDES = [
+  {
+    id: 's0',
+    caption: 'Introduction',
+    text: "Welcome to doc to H T M L — a browser-based tool that transforms Word documents, spreadsheets, and plain text into clean, semantic H T M L 5 — all without uploading your files to any server. Let's walk through what this tool does, how it works, and why every output it produces is production-ready."
+  },
+  {
+    id: 's1',
+    caption: 'How it works',
+    text: "The conversion happens in four steps. Step one — upload your file. Drag and drop a Word document, an Excel spreadsheet, a C S V, or paste text into the editor. Nothing leaves your machine. Step two — the tool extracts the content. Mammoth dot J S handles Word files; SheetJS parses spreadsheets. Step three — fifteen production rules run in sequence: normalising headings, converting phone numbers to clickable links, replacing symbols with H T M L entities, stripping legacy Office markup, and more. Step four — you get clean H T M L 5 output. Preview it, copy the markup, or download as a text file."
+  },
+  {
+    id: 's2',
+    caption: 'Sample conversion — before & after',
+    text: "Here's a concrete before and after. On the left is a Word-style document with a heading, a phone number, a Bluecard trademark reference, an underlined word, and a data table. On the right is what the converter produces. The H 1 heading becomes H 2. The phone number becomes a clickable tel link. The trademark symbol becomes the trade H T M L entity. The underline is stripped. And the table gets proper thead, th scope equals col, and tbody markup — screen readers will navigate it correctly."
+  },
+  {
+    id: 's3a',
+    caption: 'Conversion rules 1–8',
+    text: "Fifteen production rules run on every conversion. Rule 1 normalises headings — H 1 shifts to H 2. Rule 2 converts phone numbers to tel links, skipping fax numbers. Rule 3 converts superscript and subscript characters to Unicode: x superscript 2 becomes x squared, and H subscript 2 O becomes H two O. Rule 4 makes legacy b tags into semantic strong. Rule 5 handles italics — short phrases become strong, long spans are unwrapped. Rule 6 strips underline tags, preserving the text. Rule 7 removes all XML and Microsoft Office processing instructions. Rule 8 replaces copyright, trademark, and registered trademark symbols with proper H T M L entities."
+  },
+  {
+    id: 's3b',
+    caption: 'Conversion rules 9–C',
+    text: "Continuing with the remaining seven rules. Rule 9 detects bold first rows in tables and promotes them to a thead with th scope equals col cells. Rule 10 auto-appends the registered trademark symbol to any occurrence of the word Bluecard that doesn't already have it. Rule 11 replaces non-breaking spaces with regular spaces. Rule D removes strikethrough text — s tags, del tags, and Markdown tilde syntax — completely from the output. Rule E corrects the nesting order when strong is inside an anchor tag. Rule F rewrites local file URLs to HTTPS. Rule A removes strong tags nested inside headings — redundant since headings are already bold. And Rule C merges two consecutive strong tags into one."
+  },
+  {
+    id: 's4',
+    caption: 'Test report — 47 / 47 passed',
+    text: "Every conversion rule has automated tests. Forty-seven tests. Forty-seven passed. Zero failed. One hundred percent coverage. The test report shows heading normalisation — checked. Phone links — checked. Unicode sup and sub — checked. Symbol entities — checked. Table scope headers — checked. Strikethrough removal — checked. All fifteen rules verified. You can expand any test card to see the input, the expected result, and the actual output — and download the full report as a text file."
+  },
+  {
+    id: 's5',
+    caption: 'Standalone test suite — tests.html',
+    text: "Alongside the main app, there's a dedicated tests dot H T M L page. Open it in any browser — no build step, no server required. The forty-seven tests run automatically on page load across sixteen test groups. Each group is collapsible so you can drill into any individual assertion. And the download report button exports everything for sharing with stakeholders or attaching to a pull request."
+  },
+  {
+    id: 's6',
+    caption: 'Key features',
+    text: "Six things that make this tool practical for real content workflows. First, browser-only processing — your documents never leave the device. Second, multi-format support: docx, xlsx, xls, csv, and direct paste from clipboard. Third, semantic H T M L 5 output with the right tags for everything. Fourth, forty-seven automated tests covering all fifteen rules. Fifth, one-click copy to clipboard or download as a text file. And sixth, a rich text editor with a full formatting toolbar built in — headings, bold, italic, lists, alignment, links, and more."
+  },
+  {
+    id: 's7',
+    caption: 'Outro',
+    text: "That's the doc to H T M L converter. Clean output. Fifteen production rules. Forty-seven tests. No server. No upload. Drop a file — get H T M L."
+  }
+];
+
+const slideEls = SLIDES.map(s => document.getElementById(s.id));
+const playBtn     = document.getElementById('playBtn');
+const prevBtn     = document.getElementById('prevBtn');
+const nextBtn     = document.getElementById('nextBtn');
+const restartBtn  = document.getElementById('restartBtn');
+const progressFill = document.getElementById('progressFill');
+const slideLabel  = document.getElementById('slideLabel');
+const captionLabel = document.getElementById('captionLabel');
+const timecode    = document.getElementById('timecode');
+const startOverlay = document.getElementById('startOverlay');
+const dotsEl      = document.getElementById('dots');
+
+let current = 0;
+let playing = false;
+let elapsed = 0;
+let ticker  = null;
+
+// Build dot nav
+SLIDES.forEach((_, i) => {
+  const d = document.createElement('button');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.title = SLIDES[i].caption;
+  d.style.cssText = 'border:none;background:none;padding:4px;cursor:pointer;';
+  d.addEventListener('click', () => { jumpTo(i); });
+  dotsEl.appendChild(d);
+});
+
+function allDots() { return dotsEl.querySelectorAll('.dot'); }
+
+function showSlide(i) {
+  slideEls.forEach((el, idx) => el.classList.toggle('active', idx === i));
+  allDots().forEach((d, idx) => d.classList.toggle('active', idx === i));
+  slideLabel.textContent = `SLIDE ${i + 1} / ${SLIDES.length}`;
+  captionLabel.textContent = SLIDES[i].caption;
+  progressFill.style.width = `${(i / (SLIDES.length - 1)) * 100}%`;
+  prevBtn.disabled = i === 0;
+  nextBtn.disabled = i === SLIDES.length - 1;
+}
+
+function fmtTime(s) {
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function startTicker() {
+  clearInterval(ticker);
+  ticker = setInterval(() => {
+    if (playing) { elapsed++; timecode.textContent = fmtTime(elapsed); }
+  }, 1000);
+}
+
+function speak(i) {
+  if (!('speechSynthesis' in window)) {
+    setTimeout(() => { if (playing) advance(); }, 4000);
+    return;
+  }
+  window.speechSynthesis.cancel();
+  showSlide(i);
+
+  const utt = new SpeechSynthesisUtterance(SLIDES[i].text);
+  utt.rate  = 0.96;
+  utt.pitch = 0.92;
+
+  const voices = window.speechSynthesis.getVoices();
+  const pick =
+    voices.find(v => /en-(US|GB|AU)/.test(v.lang) && /daniel|david|alex|tom|fred|male/i.test(v.name)) ||
+    voices.find(v => /en/.test(v.lang) && /male/i.test(v.name)) ||
+    voices.find(v => /en-(US|GB|AU)/.test(v.lang)) ||
+    voices.find(v => /en/.test(v.lang));
+  if (pick) utt.voice = pick;
+
+  utt.onend = () => { if (playing) advance(); };
+  window.speechSynthesis.speak(utt);
+}
+
+function advance() {
+  if (current < SLIDES.length - 1) {
+    current++;
+    speak(current);
+  } else {
+    playing = false;
+    playBtn.innerHTML = '&#9654;';
+    clearInterval(ticker);
+  }
+}
+
+function play() {
+  playing = true;
+  playBtn.innerHTML = '&#9646;&#9646;';
+  startTicker();
+  if (window.speechSynthesis && window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  } else {
+    speak(current);
+  }
+}
+
+function pause() {
+  playing = false;
+  playBtn.innerHTML = '&#9654;';
+  if ('speechSynthesis' in window) window.speechSynthesis.pause();
+}
+
+function jumpTo(i) {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  current = i;
+  playing = false;
+  playBtn.innerHTML = '&#9654;';
+  showSlide(i);
+}
+
+playBtn.addEventListener('click', () => { if (playing) pause(); else play(); });
+
+prevBtn.addEventListener('click', () => {
+  if (current > 0) { jumpTo(current - 1); }
+});
+
+nextBtn.addEventListener('click', () => {
+  if (current < SLIDES.length - 1) { jumpTo(current + 1); }
+});
+
+restartBtn.addEventListener('click', () => {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  current = 0; elapsed = 0;
+  playing = false;
+  playBtn.innerHTML = '&#9654;';
+  timecode.textContent = '0:00';
+  clearInterval(ticker);
+  showSlide(0);
+});
+
+startOverlay.addEventListener('click', () => {
+  startOverlay.style.display = 'none';
+  play();
+});
+
+// Warm up voice list (Chrome loads async)
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+
+showSlide(0);
+</script>
+</body>
+</html>
