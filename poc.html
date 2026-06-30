@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>doc→html · POC Demo</title>
+  <title>doc→html · Proof of Concept</title>
   <style>
     :root {
       --ink:#1a1a18; --paper:#f7f6f3; --surface:#fff;
@@ -46,23 +46,32 @@
     .step h3{font-size:.95rem;font-weight:700;margin-bottom:.35rem;}
     .step p{font-size:.82rem;color:#5a5952;line-height:1.5;}
 
-    /* ── LIVE DEMO ── */
-    .demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:3rem;}
-    @media(max-width:680px){.demo-grid{grid-template-columns:1fr;}}
+    /* ── SAMPLE CONVERSION ── */
+    .sample-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:3rem;}
+    @media(max-width:680px){.sample-grid{grid-template-columns:1fr;}}
 
-    .demo-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-    .demo-box-header{background:#f0efe9;border-bottom:1px solid var(--border);padding:.6rem 1rem;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a5952;display:flex;align-items:center;gap:6px;}
-    .demo-box-body{padding:1rem;}
+    .sample-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .sample-box-header{background:#f0efe9;border-bottom:1px solid var(--border);padding:.6rem 1rem;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#5a5952;display:flex;align-items:center;gap:6px;}
+    .sample-box-body{padding:1rem;}
 
-    textarea{width:100%;min-height:180px;border:1px solid var(--border-s);border-radius:6px;padding:.75rem;font-family:var(--mono);font-size:.8rem;line-height:1.6;resize:vertical;color:var(--ink);background:#fff;outline:none;}
-    textarea:focus{border-color:#9a9890;}
-    .convert-btn{margin-top:.6rem;width:100%;padding:.65rem;background:var(--ink);color:#fff;border:none;border-radius:6px;font-weight:600;font-size:.85rem;cursor:pointer;transition:opacity .15s;}
-    .convert-btn:hover{opacity:.85;}
+    .doc-preview{min-height:220px;border:1px solid var(--border-s);border-radius:6px;background:#fdfcf9;padding:.85rem 1rem;font-size:.85rem;line-height:1.75;color:var(--ink);}
+    .doc-preview .doc-h1{font-size:1.1rem;font-weight:800;border-bottom:1px solid var(--border);padding-bottom:.3rem;margin-bottom:.6rem;}
+    .doc-preview .doc-bold{font-weight:700;}
+    .doc-preview .doc-strike{text-decoration:line-through;color:#999;}
+    .doc-preview .doc-table{width:100%;border-collapse:collapse;margin:.5rem 0;font-size:.8rem;}
+    .doc-preview .doc-table td{border:1px solid var(--border-s);padding:.3rem .5rem;}
+    .doc-preview .doc-table tr:first-child td{font-weight:700;background:#f0efe9;}
 
-    .output-box{min-height:180px;border:1px solid var(--border-s);border-radius:6px;background:#1a1a18;padding:.75rem;font-family:var(--mono);font-size:.78rem;line-height:1.7;color:#a8d5a2;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:260px;}
-    .output-box .hl-tag{color:#f08d49;}
-    .output-box .hl-attr{color:#82c6d8;}
-    .output-box .hl-val{color:#b9da97;}
+    .code-preview{min-height:220px;border:1px solid var(--border-s);border-radius:6px;background:#1a1a18;padding:.85rem 1rem;font-family:var(--mono);font-size:.78rem;line-height:1.75;color:#a8d5a2;white-space:pre;overflow:auto;max-height:300px;}
+    .hl-tag{color:#f08d49;}
+    .hl-attr{color:#82c6d8;}
+    .hl-val{color:#b9da97;}
+    .hl-text{color:#d4d0c8;}
+
+    .sample-arrow{display:flex;align-items:center;justify-content:center;padding:.5rem 0 1rem;font-size:.78rem;color:#5a5952;gap:.4rem;}
+    .sample-arrow::before{content:'';flex:1;height:1px;background:var(--border);}
+    .sample-arrow::after{content:'';flex:1;height:1px;background:var(--border);}
+    .arrow-label{background:var(--ink);color:#6fcf97;padding:3px 14px;border-radius:20px;font-family:var(--mono);font-size:.75rem;white-space:nowrap;}
 
     /* ── RULES TABLE ── */
     .rules-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:3rem;}
@@ -120,7 +129,7 @@
 
 <nav>
   <div class="nav-brand">doc<span>→</span>html</div>
-  <span class="nav-tag">POC · Proof of Concept</span>
+  <span class="nav-tag">Proof of Concept</span>
 </nav>
 
 <!-- HERO -->
@@ -145,37 +154,64 @@
     <div class="step"><div class="step-num">4</div><h3>Verify with Tests</h3><p>22 automated checks run on every conversion. Download a full HTML test report with line-numbered pass/fixed/fail details.</p></div>
   </div>
 
-  <!-- LIVE DEMO -->
-  <div class="section-title">Live Demo</div>
-  <div class="section-sub">Paste any text with basic HTML below and see it processed through the conversion rules.</div>
-  <div class="demo-grid">
-    <div class="demo-box">
-      <div class="demo-box-header">📥 Input HTML (paste here)</div>
-      <div class="demo-box-body">
-        <textarea id="demo-input" spellcheck="false"><h1>Company Overview</h1>
-<p>Call us at <b>044-1234567</b> or Fax: 044-9999999</p>
-<p><b>John</b><b> Smith</b> is the CEO.</p>
-<p>This product is <s>discontinued</s> and this feature is <del>removed</del>.</p>
-<p><a href="file://www.google.com/search"><strong>Search Here</strong></a></p>
-<p>Visit us: <a href="file://internal/document/about-us">About Us</a></p>
-<p>Broken link: <a href="https://example.com>click here</a></p>
-<p>First paragraph<p>Second paragraph missing a close tag</p>
-<table>
-  <tr><td><b>Name</b></td><td><b>Role</b></td></tr>
-  <tr><td>Alice</td><td>Engineer</td></tr>
-  <tr><td>Bob</td><td>Designer</td></tr>
-</table>
-<p>Copyright (C) 2024. All rights reserved (TM)</p></textarea>
-        <button class="convert-btn" onclick="runDemo()">▶ Run Conversion Rules</button>
+  <!-- SAMPLE CONVERSION -->
+  <div class="section-title">Sample Conversion</div>
+  <div class="section-sub">A Word document or typed content goes in — clean semantic HTML5 comes out. No manual editing required.</div>
+
+  <div class="sample-arrow"><span class="arrow-label">📄 .docx / .xlsx / typed text &nbsp;→&nbsp; clean HTML5</span></div>
+
+  <div class="sample-grid">
+    <div class="sample-box">
+      <div class="sample-box-header">📄 Source document (Word / typed text)</div>
+      <div class="sample-box-body">
+        <div class="doc-preview">
+          <div class="doc-h1">Company Overview</div>
+          <p>Call us at <span class="doc-bold">044-1234567</span> or Fax: 044-9999999</p>
+          <p><span class="doc-bold">John</span><span class="doc-bold"> Smith</span> is the CEO.</p>
+          <p>This product is <span class="doc-strike">discontinued</span> and will be replaced.</p>
+          <p>Visit us: <span style="color:var(--blue);text-decoration:underline">About Us</span> (file://internal/document/about-us)</p>
+          <p>Copyright (C) 2024. All rights reserved (TM)</p>
+          <br>
+          <table class="doc-table">
+            <tr><td>Name</td><td>Role</td></tr>
+            <tr><td>Alice</td><td>Engineer</td></tr>
+            <tr><td>Bob</td><td>Designer</td></tr>
+          </table>
+        </div>
       </div>
     </div>
-    <div class="demo-box">
-      <div class="demo-box-header">📤 Output HTML (after rules)</div>
-      <div class="demo-box-body">
-        <div class="output-box" id="demo-output">Click "Run Conversion Rules" →</div>
-        <div id="demo-fixes" style="margin-top:.6rem"></div>
+    <div class="sample-box">
+      <div class="sample-box-header">✅ Output HTML (after 15 conversion rules)</div>
+      <div class="sample-box-body">
+        <div class="code-preview"><span class="hl-tag">&lt;h2&gt;</span><span class="hl-text">Company Overview</span><span class="hl-tag">&lt;/h2&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>Call us at <span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>="<span class="hl-val">tel:0441234567</span>"<span class="hl-tag">&gt;</span>044-1234567<span class="hl-tag">&lt;/a&gt;</span>
+or Fax: 044-9999999<span class="hl-tag">&lt;/p&gt;</span>
+<span class="hl-tag">&lt;p&gt;&lt;strong&gt;</span>John Smith<span class="hl-tag">&lt;/strong&gt;</span> is the CEO.<span class="hl-tag">&lt;/p&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>This product will be replaced.<span class="hl-tag">&lt;/p&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>Visit us: <span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>="<span class="hl-val">https://internal/document/about-us</span>"<span class="hl-tag">&gt;</span>About Us<span class="hl-tag">&lt;/a&gt;&lt;/p&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>&amp;copy; 2024. All rights reserved &amp;trade;<span class="hl-tag">&lt;/p&gt;</span>
+<span class="hl-tag">&lt;table&gt;</span>
+  <span class="hl-tag">&lt;thead&gt;&lt;tr&gt;</span>
+    <span class="hl-tag">&lt;th</span> <span class="hl-attr">scope</span>="<span class="hl-val">col</span>"<span class="hl-tag">&gt;</span>Name<span class="hl-tag">&lt;/th&gt;</span>
+    <span class="hl-tag">&lt;th</span> <span class="hl-attr">scope</span>="<span class="hl-val">col</span>"<span class="hl-tag">&gt;</span>Role<span class="hl-tag">&lt;/th&gt;</span>
+  <span class="hl-tag">&lt;/tr&gt;&lt;/thead&gt;</span>
+  <span class="hl-tag">&lt;tbody&gt;</span>
+    <span class="hl-tag">&lt;tr&gt;&lt;td&gt;</span>Alice<span class="hl-tag">&lt;/td&gt;&lt;td&gt;</span>Engineer<span class="hl-tag">&lt;/td&gt;&lt;/tr&gt;</span>
+    <span class="hl-tag">&lt;tr&gt;&lt;td&gt;</span>Bob<span class="hl-tag">&lt;/td&gt;&lt;td&gt;</span>Designer<span class="hl-tag">&lt;/td&gt;&lt;/tr&gt;</span>
+  <span class="hl-tag">&lt;/tbody&gt;</span>
+<span class="hl-tag">&lt;/table&gt;</span></div>
       </div>
     </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:3rem;font-size:.82rem;color:#5a5952;display:flex;flex-wrap:wrap;gap:1rem;">
+    <span>🔴 <code>&lt;h1&gt;</code> → <code>&lt;h2&gt;</code> (Rule 1)</span>
+    <span>📞 Phone number → <code>tel:</code> link, fax skipped (Rule 2)</span>
+    <span>🗑️ Strikethrough text removed entirely (Rule D)</span>
+    <span>🔗 <code>file://</code> URL → <code>https://</code> (Rule F)</span>
+    <span>©™ Symbol entities applied (Rule 8)</span>
+    <span>🏷️ Bold header row → <code>&lt;th scope="col"&gt;</code> + <code>&lt;thead&gt;</code> (Rule 9)</span>
+    <span>💪 Consecutive <code>&lt;strong&gt;</code> tags merged (Rule C)</span>
   </div>
 
   <!-- CONVERSION RULES -->
@@ -283,242 +319,6 @@
   </div>
 </div>
 
-<footer>doc→html Converter · POC Demo · Runs entirely in your browser · No server upload</footer>
-
-<script>
-/* Demo runner — applies all 15 rules client-side */
-var demoFixes = [];
-
-function runDemo() {
-  demoFixes = [];
-  var raw = document.getElementById('demo-input').value;
-  var out = applyRules(raw);
-  document.getElementById('demo-output').innerHTML = syntaxHL(escForDisplay(out));
-  renderFixes();
-}
-
-function renderFixes() {
-  var box = document.getElementById('demo-fixes');
-  if (!demoFixes.length) {
-    box.innerHTML = '<div class="check-item" style="border:1px solid var(--border);border-radius:6px"><span class="check-icon ok">✓</span><span class="check-name">No unclosed quotes, brackets, or tags detected</span><span class="check-rule">Rule G</span></div>';
-    return;
-  }
-  var html = '<div class="check-list" style="border:1px solid var(--border)">';
-  demoFixes.forEach(function(f) {
-    html += '<div class="check-item">'
-      + '<span class="check-icon fixed">🔧</span>'
-      + '<span class="check-name">' + f.type + '</span>'
-      + '<span class="check-line fixed-line">Line ' + f.lineNo + '</span>'
-      + '<div class="fixed-diff"><code>' + escForDisplay(f.before) + '</code> → <code class="to">' + escForDisplay(f.after) + '</code></div>'
-      + '</div>';
-  });
-  html += '</div>';
-  box.innerHTML = html;
-}
-
-function applyRules(html) {
-  /* Rule G — fix unclosed quotes, stray brackets, unclosed tags (runs first, on raw string) */
-  html = ruleG(html);
-
-  var doc  = new DOMParser().parseFromString('<div id="r">' + html + '</div>', 'text/html');
-  var root = doc.getElementById('r');
-
-  /* Rule 1 — h1→h2 */
-  root.querySelectorAll('h1').forEach(function(el){ changeTag(el,'h2'); });
-  /* Rule 4 — b→strong */
-  root.querySelectorAll('b').forEach(function(el){ changeTag(el,'strong'); });
-  /* Rule 6 — remove u */
-  root.querySelectorAll('u').forEach(function(el){ unwrap(el); });
-  /* Rule A — no strong in headings */
-  root.querySelectorAll('h2 strong,h3 strong').forEach(function(el){ unwrap(el); });
-  /* Rule C — merge consecutive strong */
-  mergeStrong(root);
-  /* Rule D — remove strikethrough text entirely */
-  ruleD(root);
-  /* Rule E — strong wraps anchor */
-  ruleE(root);
-  /* Rule B — table scope */
-  tableScope(root);
-
-  var s = root.innerHTML;
-  /* Rule 8 — symbol entities */
-  s = s.replace(/\(C\)/gi,'&copy;').replace(/\(TM\)/gi,'&trade;').replace(/\(R\)/gi,'&reg;');
-  /* Rule 10 — Bluecard */
-  s = s.replace(/\bBluecard\b(?!&reg;)/gi, function(m){ return m+'&reg;'; });
-  /* Rule 11 — nbsp */
-  s = s.replace(/&nbsp;/gi,' ');
-  /* Rule F — fix file:// URLs */
-  s = ruleF(s);
-  /* Rule 2 — phone tel (skip fax) */
-  s = s.replace(/>([\s\S]*?)</g, function(m, text) {
-    var r = text.replace(/(\+?[\d][\d\s.\-()\u200c]{6,}[\d])/g, function(ph, _m, offset, str) {
-      var before = str.slice(Math.max(0,offset-60),offset);
-      var after  = str.slice(offset+ph.length, offset+ph.length+20);
-      if (/\bfax\b/i.test(before)||/\bfax\b/i.test(after)) return ph;
-      return '<a href="tel:'+ph.replace(/[^\d+]/g,'')+'">'+ph+'</a>';
-    });
-    return '>'+r+'<';
-  });
-  return s.trim();
-}
-
-function tableScope(root) {
-  root.querySelectorAll('table').forEach(function(table) {
-    var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
-    if (!rows.length) return;
-    var headCells = Array.prototype.slice.call(rows[0].querySelectorAll('td,th'));
-    if (!headCells.length || !headCells.every(function(c){ return cellBold(c); })) return;
-    headCells.forEach(function(cell) {
-      root.querySelectorAll('strong').forEach(function(s){ if(cell.contains(s)) unwrap(s); });
-      var th = changeTag(cell,'th'); th.setAttribute('scope','col');
-    });
-    var thead = table.ownerDocument.createElement('thead');
-    rows[0].parentNode.removeChild(rows[0]); thead.appendChild(rows[0]);
-    var tbody = table.ownerDocument.createElement('tbody');
-    rows.slice(1).forEach(function(tr){ tr.parentNode.removeChild(tr); tbody.appendChild(tr); });
-    while(table.firstChild) table.removeChild(table.firstChild);
-    table.appendChild(thead); if(rows.slice(1).length) table.appendChild(tbody);
-  });
-}
-function cellBold(c) {
-  var t=c.textContent.trim(); if(!t) return false;
-  var ss=Array.prototype.slice.call(c.querySelectorAll('strong'));
-  if(!ss.length) return false;
-  return ss.map(function(s){return s.textContent;}).join('').trim()===t;
-}
-function mergeStrong(root) {
-  root.querySelectorAll('strong strong').forEach(function(i){ unwrap(i); });
-  root.querySelectorAll('strong').forEach(function(el) {
-    var nx=el.nextSibling, gap=null;
-    if(nx&&nx.nodeType===3&&nx.nodeValue.trim()===''){gap=nx;nx=nx.nextSibling;}
-    if(nx&&nx.nodeName==='STRONG'){if(gap)el.appendChild(gap);while(nx.firstChild)el.appendChild(nx.firstChild);nx.parentNode.removeChild(nx);}
-  });
-}
-function ruleD(root) {
-  /* Remove <s>, <del>, <strike> and all their content */
-  root.querySelectorAll('s,del,strike').forEach(function(el){ el.parentNode.removeChild(el); });
-  /* Remove ~~text~~ from text nodes */
-  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-  var nodes=[]; var n; while((n=walker.nextNode())) nodes.push(n);
-  nodes.forEach(function(tn){ if(/~~[\s\S]*?~~/.test(tn.nodeValue)) tn.nodeValue=tn.nodeValue.replace(/~~[\s\S]*?~~/g,''); });
-}
-function ruleE(root) {
-  /* <a><strong>text</strong></a>  →  <strong><a>text</a></strong> */
-  root.querySelectorAll('a > strong').forEach(function(strong) {
-    var a = strong.parentNode;
-    if (a.nodeName !== 'A') return;
-    var other = Array.prototype.slice.call(a.childNodes).filter(function(nd){ return nd!==strong&&!(nd.nodeType===3&&nd.nodeValue.trim()===''); });
-    if (other.length) return;
-    var na = a.ownerDocument.createElement('a');
-    Array.prototype.slice.call(a.attributes).forEach(function(at){ na.setAttribute(at.name,at.value); });
-    while(strong.firstChild) na.appendChild(strong.firstChild);
-    strong.appendChild(na);
-    a.parentNode.replaceChild(strong, a);
-  });
-}
-function ruleF(html) {
-  return html.replace(/(<a\s[^>]*href\s*=\s*["'])file:\/\/([^"']*)(["'][^>]*>)/gi, function(m,open,path,close){
-    var segs = path.replace(/\\/g,'/').split('/').filter(Boolean);
-    var domain=null, idx=-1;
-    for(var i=0;i<segs.length;i++){
-      if(/^[a-zA-Z0-9]([a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/.test(segs[i])){domain=segs[i];idx=i;break;}
-    }
-    var url = domain ? 'https://'+domain+(segs.slice(idx+1).length?'/'+segs.slice(idx+1).join('/'):'') : '#';
-    return open+url+close;
-  });
-}
-function ruleG(html) {
-  var lines = html.split('\n');
-
-  /* Fix 1: unclosed attribute quotes */
-  lines = lines.map(function(line, idx) {
-    return line.replace(/<([a-zA-Z][a-zA-Z0-9]*)((?:\s+[^<>]*)?)>/g, function(full, tag, attrs) {
-      if (!attrs) return full;
-      var dq = (attrs.match(/"/g)||[]).length;
-      var sq = (attrs.match(/'/g)||[]).length;
-      var newAttrs = attrs, changed = false;
-      if (dq % 2 === 1) { newAttrs = newAttrs.replace(/\s*$/,'') + '"'; changed = true; }
-      if (sq % 2 === 1) { newAttrs = newAttrs.replace(/\s*$/,'') + "'"; changed = true; }
-      if (changed) {
-        var after = '<'+tag+newAttrs+'>';
-        demoFixes.push({ type:'Unclosed attribute quote auto-fixed', before: full.trim(), after: after.trim(), lineNo: idx+1 });
-        return after;
-      }
-      return full;
-    });
-  });
-  html = lines.join('\n');
-
-  /* Fix 2: stray "<" not part of a tag */
-  lines = html.split('\n');
-  lines = lines.map(function(line, idx) {
-    if (/<(?![a-zA-Z\/!])/.test(line)) {
-      var after = line.replace(/<(?![a-zA-Z\/!])/, '&lt;');
-      demoFixes.push({ type:'Stray "&lt;" escaped to &amp;lt;', before: line.trim(), after: after.trim(), lineNo: idx+1 });
-      return after;
-    }
-    return line;
-  });
-  html = lines.join('\n');
-
-  /* Fix 3: unclosed block tags via running-balance scan */
-  ['p','div','li','td','th','tr','h2','h3','h4','h5','h6'].forEach(function(tag) {
-    var tagRe = new RegExp('<(\\/?)'+tag+'((?:\\s[^>]*)?)>','gi');
-    var hLines = html.split('\n');
-    var openStack = [];
-    hLines.forEach(function(line, idx) {
-      var m;
-      tagRe.lastIndex = 0;
-      while ((m = tagRe.exec(line)) !== null) {
-        var isClose = m[1] === '/';
-        var tagText = m[0];
-        if (isClose) {
-          if (openStack.length) openStack.pop();
-        } else {
-          if (openStack.length) {
-            var prev = openStack[openStack.length-1];
-            demoFixes.push({
-              type: 'Unclosed &lt;'+tag+'&gt; tag auto-closed',
-              before: prev.tagText + ' … ' + tagText,
-              after:  prev.tagText + ' … </'+tag+'>' + tagText,
-              lineNo: prev.lineNo
-            });
-            openStack.pop();
-          }
-          openStack.push({ lineNo: idx+1, tagText: tagText });
-        }
-      }
-    });
-    while (openStack.length > 1) {
-      var leftover = openStack.shift();
-      demoFixes.push({
-        type: 'Unclosed &lt;'+tag+'&gt; tag auto-closed',
-        before: leftover.tagText + ' … (end of document)',
-        after:  leftover.tagText + ' … </'+tag+'>',
-        lineNo: leftover.lineNo
-      });
-    }
-  });
-
-  return html;
-}
-
-function changeTag(el,tag){
-  var n=el.ownerDocument.createElement(tag);
-  Array.prototype.slice.call(el.attributes).forEach(function(a){n.setAttribute(a.name,a.value);});
-  while(el.firstChild) n.appendChild(el.firstChild);
-  el.parentNode.replaceChild(n,el); return n;
-}
-function unwrap(el){var p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);p.removeChild(el);}
-
-function escForDisplay(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function syntaxHL(s){
-  return s
-    .replace(/(&lt;\/?[a-z][a-z0-9]*)/gi,'<span class="hl-tag">$1</span>')
-    .replace(/(scope|href|class)=/g,'<span class="hl-attr">$1</span>=')
-    .replace(/="([^"]*)"/g,'="<span class="hl-val">$1</span>"');
-}
-window.addEventListener('DOMContentLoaded', runDemo);
-</script>
+<footer>doc→html Converter · Proof of Concept · Converts .docx / .xlsx / .csv / typed text to clean HTML5 · Runs entirely in your browser</footer>
 </body>
 </html>
