@@ -151,7 +151,7 @@
     <div class="step"><div class="step-num">1</div><h3>Choose Input</h3><p>Upload a .docx / .xlsx / .csv file via drag-and-drop, or switch to the built-in rich text editor.</p></div>
     <div class="step"><div class="step-num">2</div><h3>Auto Convert</h3><p>15 transformation rules run instantly — headings, bold detection, tables, phone links, strikethrough removal, link nesting, URL fixing, syntax repair and more.</p></div>
     <div class="step"><div class="step-num">3</div><h3>Copy or Download</h3><p>Switch between Preview and HTML code tabs. Copy to clipboard or download as a .txt file.</p></div>
-    <div class="step"><div class="step-num">4</div><h3>Verify with Tests</h3><p>22 automated checks run on every conversion. Download a full HTML test report with line-numbered pass/fixed/fail details.</p></div>
+    <div class="step"><div class="step-num">4</div><h3>Verify with Tests</h3><p>47 automated checks run on every conversion. Open the built-in test panel or visit tests.html for the standalone suite — download a full HTML report.</p></div>
   </div>
 
   <!-- SAMPLE CONVERSION -->
@@ -222,7 +222,7 @@ or Fax: 044-9999999<span class="hl-tag">&lt;/p&gt;</span>
     <tbody>
       <tr><td>1</td><td>Heading normalise</td><td><code>&lt;h1&gt;</code></td><td><code>&lt;h2&gt;</code></td></tr>
       <tr><td>2</td><td>Phone → tel: link</td><td>044-1234567</td><td><code>&lt;a href="tel:0441234567"&gt;</code> (fax numbers skipped)</td></tr>
-      <tr><td>3</td><td>Sup/Sub → Unicode</td><td><code>&lt;sup&gt;TM&lt;/sup&gt;</code></td><td><code>&amp;trade;</code></td></tr>
+      <tr><td>3</td><td>Sup/Sub → Unicode entities</td><td><code>x&lt;sup&gt;2&lt;/sup&gt;</code>, <code>H&lt;sub&gt;2&lt;/sub&gt;O</code></td><td><code>x&amp;sup2;</code>, <code>H&amp;#x2082;O</code> (tag removed; SM/TM/R map to named entities)</td></tr>
       <tr><td>4</td><td>b → strong</td><td><code>&lt;b&gt;</code></td><td><code>&lt;strong&gt;</code></td></tr>
       <tr><td>5</td><td>i/em → strong (short) or unwrap (long)</td><td><code>&lt;i&gt;Note&lt;/i&gt;</code></td><td><code>&lt;strong&gt;Note&lt;/strong&gt;</code></td></tr>
       <tr><td>6</td><td>Remove underline</td><td><code>&lt;u&gt;</code></td><td>unwrapped (text kept)</td></tr>
@@ -234,47 +234,43 @@ or Fax: 044-9999999<span class="hl-tag">&lt;/p&gt;</span>
       <tr><td>D</td><td>Remove strikethrough text</td><td><code>&lt;s&gt;</code>, <code>&lt;del&gt;</code>, <code>~~text~~</code></td><td>tag and text removed entirely</td></tr>
       <tr><td>E</td><td>strong wraps anchor</td><td><code>&lt;a&gt;&lt;strong&gt;text&lt;/strong&gt;&lt;/a&gt;</code></td><td><code>&lt;strong&gt;&lt;a&gt;text&lt;/a&gt;&lt;/strong&gt;</code></td></tr>
       <tr><td>F</td><td>Fix file:// URLs</td><td><code>href="file://www.example.com/page"</code></td><td><code>href="https://www.example.com/page"</code></td></tr>
-      <tr><td>G</td><td>Fix unclosed quotes, brackets &amp; tags</td><td><code>&lt;a href="https://x.com&gt;</code>, <code>&lt;p&gt;A&lt;p&gt;B&lt;/p&gt;</code></td><td>quote/tag auto-closed, flagged 🔧 in test report</td></tr>
+      <tr><td>A</td><td>No &lt;strong&gt; inside headings</td><td><code>&lt;h2&gt;&lt;strong&gt;Title&lt;/strong&gt;&lt;/h2&gt;</code></td><td><code>&lt;h2&gt;Title&lt;/h2&gt;</code> (strong unwrapped)</td></tr>
+      <tr><td>C</td><td>Merge consecutive &lt;strong&gt;</td><td><code>&lt;strong&gt;Hello&lt;/strong&gt;&lt;strong&gt; world&lt;/strong&gt;</code></td><td><code>&lt;strong&gt;Hello world&lt;/strong&gt;</code></td></tr>
     </tbody>
   </table>
 
   <!-- TEST REPORT -->
   <div class="section-title">Post-Conversion Test Report</div>
-  <div class="section-sub">Every conversion automatically runs 21 checks against the output. Download a full HTML report with line-numbered error locations.</div>
+  <div class="section-sub">Every conversion automatically runs 47 checks against the output. Results appear in the collapsible test panel below the converter — download a full HTML report with input/expected/actual columns.</div>
 
   <div class="report-grid">
     <div>
       <div class="scorecard">
-        <div><div class="score-num" style="color:var(--ink)">22</div><div class="score-label">Total Checks</div></div>
-        <div><div class="score-num score-pass">19</div><div class="score-label">Passed</div></div>
-        <div><div class="score-num score-fixed">2</div><div class="score-label">Auto-Fixed</div></div>
-        <div><div class="score-num score-fail">1</div><div class="score-label">Failed</div></div>
-        <div class="pct-bar"><div class="pct-fill warn" style="width:86%"></div></div>
-        <span style="font-family:var(--mono);font-weight:700;color:#d97706;font-size:.85rem">86%</span>
+        <div><div class="score-num" style="color:var(--ink)">47</div><div class="score-label">Total Checks</div></div>
+        <div><div class="score-num score-pass">47</div><div class="score-label">Passed</div></div>
+        <div><div class="score-num score-fixed">0</div><div class="score-label">Failed</div></div>
+        <div class="pct-bar"><div class="pct-fill" style="width:100%"></div></div>
+        <span style="font-family:var(--mono);font-weight:700;color:var(--green);font-size:.85rem">100%</span>
       </div>
 
       <!-- Legend -->
       <div style="display:flex;gap:1.25rem;flex-wrap:wrap;font-size:.72rem;color:#5a5952;margin-bottom:.6rem;padding:0 .2rem;">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:5px;vertical-align:middle"></span>Passed — no issue found</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7c4dab;margin-right:5px;vertical-align:middle"></span>Auto-Fixed — issue corrected automatically</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--accent);margin-right:5px;vertical-align:middle"></span>Failed — needs attention</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:5px;vertical-align:middle"></span>Passed — output matched expected pattern</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--accent);margin-right:5px;vertical-align:middle"></span>Failed — output did not match expected pattern</span>
       </div>
 
       <div class="check-list">
-        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;h1&gt; tags in output (h1 → h2)</span><span class="check-rule">Rule 1</span></div>
-        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;b&gt; tags in output (b → strong)</span><span class="check-rule">Rule 4</span></div>
-        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;u&gt; tags in output (underline removed)</span><span class="check-rule">Rule 6</span></div>
-        <div class="check-item"><span class="check-icon bad">✗</span><span class="check-name">No &amp;nbsp; entities in output</span><span class="check-line">Line 14</span></div>
-        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No &lt;s&gt;, &lt;del&gt;, or &lt;strike&gt; tags</span><span class="check-rule">Rule D</span></div>
-        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No file:// URLs in href attributes</span><span class="check-rule">Rule F</span></div>
-        <div class="check-item">
-          <span class="check-icon fixed">🔧</span><span class="check-name">Unclosed attribute quote auto-fixed</span><span class="check-line fixed-line">Line 9</span>
-          <div class="fixed-diff"><code>&lt;a href="https://example.com&gt;</code> → <code class="to">&lt;a href="https://example.com"&gt;</code></div>
-        </div>
-        <div class="check-item">
-          <span class="check-icon fixed">🔧</span><span class="check-name">Unclosed &lt;p&gt; tag auto-closed</span><span class="check-line fixed-line">Line 22</span>
-          <div class="fixed-diff"><code>&lt;p&gt;First … &lt;p&gt;</code> → <code class="to">&lt;p&gt;First … &lt;/p&gt;&lt;p&gt;</code></div>
-        </div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;h1&gt; converted to &lt;h2&gt;</span><span class="check-rule">Rule 1</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;b&gt; converted to &lt;strong&gt;</span><span class="check-rule">Rule 4</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">Short &lt;i&gt; / &lt;em&gt; converted to &lt;strong&gt;</span><span class="check-rule">Rule 5</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;u&gt; tag removed, text kept</span><span class="check-rule">Rule 6</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;s&gt; / &lt;del&gt; elements removed entirely</span><span class="check-rule">Rule D</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">file:// URLs converted to https://</span><span class="check-rule">Rule F</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">All-bold first row → &lt;thead&gt; with &lt;th scope="col"&gt;</span><span class="check-rule">Rule B</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;strong&gt; inside headings unwrapped</span><span class="check-rule">Rule A</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">Adjacent &lt;strong&gt; tags merged into one</span><span class="check-rule">Rule C</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">&lt;a&gt;&lt;strong&gt; nesting flipped to &lt;strong&gt;&lt;a&gt;</span><span class="check-rule">Rule E</span></div>
+        <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">Phone numbers wrapped in tel: links (fax skipped)</span><span class="check-rule">Rule 2</span></div>
         <div class="check-item"><span class="check-icon ok">✓</span><span class="check-name">No inline style= attributes in output</span><span class="check-rule">General</span></div>
       </div>
 
@@ -284,24 +280,46 @@ or Fax: 044-9999999<span class="hl-tag">&lt;/p&gt;</span>
     <div>
       <div class="feat" style="margin-bottom:1rem">
         <div class="feat-icon">🧪</div>
-        <h3>22 Automated Checks</h3>
-        <p>Covers all 15 conversion rules plus general checks: no leftover styles, no class attributes, valid tel: links, and non-empty output.</p>
+        <h3>47 Automated Checks</h3>
+        <p>Covers all 15 conversion rules plus editor sanitiser checks: no leftover styles, no class attributes, div→p normalisation, valid tel: links, and non-empty output.</p>
       </div>
       <div class="feat" style="margin-bottom:1rem">
-        <div class="feat-icon">🔧</div>
-        <h3>Auto-Fix with Diff View</h3>
-        <p>Unclosed quotes, stray brackets, and unclosed tags are detected and repaired automatically — shown in purple with a before → after diff.</p>
+        <div class="feat-icon">🔁</div>
+        <h3>Input / Expected / Actual</h3>
+        <p>Every test row shows the exact input, the expected output pattern, and the actual output — expand any row to see the full detail.</p>
       </div>
       <div class="feat" style="margin-bottom:1rem">
-        <div class="feat-icon">📍</div>
-        <h3>Line-Numbered Errors</h3>
-        <p>Every failed or fixed check points to the exact line number and snippet in the converted HTML — no manual searching required.</p>
+        <div class="feat-icon">📋</div>
+        <h3>Grouped by Rule</h3>
+        <p>Tests are organised into groups: Headings, Bold, Italic, Underline, Strikethrough, Tables, Strong merging, Link order, URL fixing, Phone links, Symbols, Bluecard, &nbsp; removal, Editor sanitiser, Full pipeline.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">📄</div>
-        <h3>Standalone HTML Report</h3>
-        <p>The report is a self-contained file with a scorecard, pass/fixed/fail breakdown grouped by rule, and the full converted HTML — ready to share or archive.</p>
+        <h3>Downloadable HTML Report</h3>
+        <p>One click exports a self-contained HTML report with a scorecard and all test rows — ready to share or archive.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- STANDALONE TEST SUITE -->
+  <div class="section-title">Standalone Test Suite</div>
+  <div class="section-sub">Open <code>tests.html</code> in any browser for a dedicated test runner that validates every conversion rule independently of the main app.</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:3rem;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-size:1.5rem;margin-bottom:.6rem;">📂</div>
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.3rem;">What it covers</h3>
+      <p style="font-size:.82rem;color:#5a5952;line-height:1.5;">47 tests across 16 groups: Headings · Bold/Strong · Italic/Em · Underline · Strikethrough · Tables · Strong merging · Link/Strong order · URL fixing · Phone links · Sup/Sub entities · Symbol entities · Bluecard® · &nbsp; removal · Editor sanitiser · Full pipeline integration.</p>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-size:1.5rem;margin-bottom:.6rem;">▶</div>
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.3rem;">How to use</h3>
+      <p style="font-size:.82rem;color:#5a5952;line-height:1.5;">Tests run automatically on page load. Click <strong>Run tests</strong> to re-run at any time. Expand any row to see Input, Expected, and Actual output side-by-side. Failing tests auto-expand in red.</p>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-size:1.5rem;margin-bottom:.6rem;">🔗</div>
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.3rem;">In-app panel too</h3>
+      <p style="font-size:.82rem;color:#5a5952;line-height:1.5;">The same 47 tests also run inside the converter — the collapsible <strong>Conversion Test Suite</strong> panel shows a live score pill and can download a standalone HTML report.</p>
     </div>
   </div>
 
@@ -310,12 +328,11 @@ or Fax: 044-9999999<span class="hl-tag">&lt;/p&gt;</span>
   <div class="section-sub">Everything you need for clean, production-ready HTML output.</div>
   <div class="features">
     <div class="feat"><div class="feat-icon">🔒</div><h3>100% Browser-Side</h3><p>No files ever leave your device. All conversion happens locally using Mammoth.js and SheetJS.</p></div>
-    <div class="feat"><div class="feat-icon">✏️</div><h3>Rich Text Editor</h3><p>Full toolbar: headings, bold, italic, underline, lists, alignment, indent, links, and more.</p></div>
+    <div class="feat"><div class="feat-icon">✏️</div><h3>Rich Text Editor</h3><p>Full toolbar: headings (H2–H6), bold, italic, underline, strikethrough, superscript, subscript, bullet list, numbered list, alignment, indent, link insert, horizontal rule, and clear formatting.</p></div>
     <div class="feat"><div class="feat-icon">📊</div><h3>Excel & CSV Support</h3><p>Every sheet becomes a labelled HTML table. Supports .xlsx, .xls, and .csv formats.</p></div>
     <div class="feat"><div class="feat-icon">🏷️</div><h3>Semantic Tables</h3><p>Bold first rows automatically become <code>&lt;th scope="col"&gt;</code> with proper <code>&lt;thead&gt;</code> and <code>&lt;tbody&gt;</code>.</p></div>
-    <div class="feat"><div class="feat-icon">📋</div><h3>Copy & Download</h3><p>One-click copy to clipboard or download as .txt. Preview rendered output alongside the code.</p></div>
-    <div class="feat"><div class="feat-icon">🌙</div><h3>Dark Mode</h3><p>Automatically adapts to your system's light or dark preference using CSS custom properties.</p></div>
-    <div class="feat"><div class="feat-icon">🧪</div><h3>Built-in Test Suite</h3><p>22 automated checks validate every conversion. Auto-fixed issues are shown in purple with a before → after diff; failures report the exact line number.</p></div>
+    <div class="feat"><div class="feat-icon">📋</div><h3>Copy & Download</h3><p>One-click copy to clipboard or download as .txt. Preview rendered output alongside the HTML code tab.</p></div>
+    <div class="feat"><div class="feat-icon">🧪</div><h3>Built-in Test Suite</h3><p>47 automated checks validate every conversion across 16 rule groups. Failing tests auto-expand with input/expected/actual detail. Download a standalone HTML report.</p></div>
   </div>
 </div>
 
